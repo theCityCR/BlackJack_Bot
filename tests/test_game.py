@@ -245,3 +245,84 @@ def test_invalid_action_raises_error():
 
     with pytest.raises(ValueError):
         game.step("invalid")
+
+def test_dealer_stands_on_soft_17():
+    deck = FixedDeck([10, 8, 1, 6])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [1, 6]
+    assert game.dealer_hand.value() == 17
+
+
+def test_dealer_hits_soft_16():
+    deck = FixedDeck([10, 8, 1, 5, 2])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [1, 5, 2]
+    assert game.dealer_hand.value() == 18
+
+
+def test_blackjack_like_21_is_not_auto_win_on_reset():
+    deck = FixedDeck([1, 10, 10, 9])
+    game = BlackjackGame(deck)
+
+    state = game.reset()
+
+    assert state.player_value == 21
+    assert game.done is False
+
+
+def test_player_can_stand_on_21_and_win():
+    deck = FixedDeck([1, 10, 10, 9])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    next_state, reward, done = game.step(Action.STAND)
+
+    assert reward == REWARD_WIN
+    assert next_state is None
+    assert done is True
+
+
+def test_reset_after_finished_game_starts_new_game():
+    deck = FixedDeck([10, 7, 10, 7, 5, 5, 9, 8])
+    game = BlackjackGame(deck)
+
+    game.reset()
+    game.step(Action.STAND)
+
+    state = game.reset()
+
+    assert game.done is False
+    assert game.player_hand.cards == [5, 5]
+    assert game.dealer_hand.cards == [9, 8]
+    assert state.player_value == 10
+    assert state.dealer_upcard == 9
+
+
+def test_hit_after_stand_is_not_allowed():
+    deck = FixedDeck([10, 7, 10, 7])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.STAND)
+
+    with pytest.raises(RuntimeError):
+        game.step(Action.HIT)
+
+
+def test_stand_after_bust_is_not_allowed():
+    deck = FixedDeck([10, 9, 10, 7, 5])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.HIT)
+
+    with pytest.raises(RuntimeError):
+        game.step(Action.STAND)
