@@ -452,3 +452,231 @@ def test_invalid_action_type_raises_error():
 
     with pytest.raises(ValueError):
         game.step("hit")
+
+# =========================
+# Additional edge-case coverage
+# =========================
+
+
+def test_game_state_repr_includes_new_q_learning_fields():
+    state = GameState(
+        player_value=12,
+        dealer_upcard=6,
+        usable_ace=False,
+        can_double=True,
+        can_split=True,
+        is_split_hand=False,
+    )
+
+    text = repr(state)
+
+    assert "player_value=12" in text
+    assert "dealer_upcard=6" in text
+    assert "usable_ace=False" in text
+    assert "can_double=True" in text
+    assert "can_split=True" in text
+    assert "is_split_hand=False" in text
+
+
+def test_current_hand_before_reset_raises_error():
+    game = BlackjackGame()
+
+    with pytest.raises(RuntimeError):
+        game.current_hand()
+
+
+def test_split_keeps_metadata_lists_aligned_after_multiple_splits():
+    # Initial [8, 8] splits into [8, 8] and [8, 4].
+    # Then the first split hand [8, 8] is resplit into [8, 2] and [8, 3].
+    deck = FixedDeck([8, 8, 10, 7, 8, 4, 2, 3])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.SPLIT)
+    game.step(Action.SPLIT)
+
+    assert [hand.cards for hand in game.player_hands] == [[8, 2], [8, 3], [8, 4]]
+    assert game.hand_bets == [1, 1, 1]
+    assert game.is_split_hand == [True, True, True]
+    assert game.is_split_aces_hand == [False, False, False]
+    assert len(game.player_hands) == len(game.hand_bets)
+    assert len(game.player_hands) == len(game.is_split_hand)
+    assert len(game.player_hands) == len(game.is_split_aces_hand)
+    assert game.active_hand_index == 0
+
+
+def test_all_split_hands_bust_so_dealer_does_not_draw():
+    # Dealer starts at 15. If the dealer incorrectly plays after both hands bust,
+    # this test would need another card and fail with IndexError.
+    deck = FixedDeck([10, 10, 8, 7, 9, 9, 5, 5])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.SPLIT)
+    next_state, reward, done = game.step(Action.HIT)
+
+    assert game.player_hands[0].cards == [10, 9, 5]
+    assert next_state.player_value == 19
+    assert reward == 0
+    assert done is False
+
+    next_state, reward, done = game.step(Action.HIT)
+
+    assert game.player_hands[1].cards == [10, 9, 5]
+    assert game.dealer_hand.cards == [8, 7]
+    assert next_state is None
+    assert reward == 2 * REWARD_LOSS
+    assert done is True
+
+
+def test_dealer_plays_if_at_least_one_split_hand_is_not_bust():
+    # First split hand busts. Second split hand stands on 18.
+    # Dealer starts at 15 and should draw 2 to reach 17.
+    deck = FixedDeck([10, 10, 8, 7, 9, 8, 5, 2])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.SPLIT)
+    next_state, reward, done = game.step(Action.HIT)
+
+    assert game.player_hands[0].cards == [10, 9, 5]
+    assert next_state.player_value == 18
+    assert reward == 0
+    assert done is False
+
+    next_state, reward, done = game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [8, 7, 2]
+    assert next_state is None
+    assert reward == 0  # first hand loses, second hand wins
+    assert done is True
+
+
+def test_split_aces_rejects_hit_double_and_split_steps():
+    deck = FixedDeck([1, 1, 10, 7, 10, 9])
+    game = BlackjackGame(deck)
+    game.reset()
+    game.step(Action.SPLIT)
+
+    assert game.available_actions() == [Action.STAND]
+
+    with pytest.raises(ValueError):
+        game.step(Action.HIT)
+
+    with pytest.raises(ValueError):
+        game.step(Action.DOUBLE)
+
+    with pytest.raises(ValueError):
+        game.step(Action.SPLIT)
+
+
+def test_double_that_busts_after_split_uses_doubled_loss_later():
+    # Split: [9,3] and [9,8].
+    # Double first hand: [9,3,10] busts, bet 2 => -2.
+    # Stand second hand: dealer 16 draws 10 and busts, normal bet => +1.
+    # Total reward = -1.
+    deck = FixedDeck([9, 9, 10, 6, 3, 8, 10, 10])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.SPLIT)
+    next_state, reward, done = game.step(Action.DOUBLE)
+
+    assert game.player_hands[0].cards == [9, 3, 10]
+    assert game.hand_bets == [2, 1]
+    assert next_state.player_value == 17
+    assert reward == 0
+    assert done is False
+
+    next_state, reward, done = game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [10, 6, 10]
+    assert next_state is None
+    assert reward == -1
+    assert done is True
+
+
+def test_state_distinguishes_initial_hand_from_split_hand_with_same_value():
+    # Initial state: [8,8] has value 16 and can split, but is not a split hand.
+    # After split: first hand [8,8] still has value 16 and can split, but is a split hand.
+    deck = FixedDeck([8, 8, 10, 7, 8, 4])
+    game = BlackjackGame(deck)
+
+    initial_state = game.reset()
+    split_state, reward, done = game.step(Action.SPLIT)
+
+    assert initial_state.player_value == split_state.player_value == 16
+    assert initial_state.dealer_upcard == split_state.dealer_upcard == 10
+    assert initial_state.can_split is True
+    assert split_state.can_split is True
+    assert initial_state.is_split_hand is False
+    assert split_state.is_split_hand is True
+    assert initial_state.as_tuple() != split_state.as_tuple()
+    assert reward == 0
+    assert done is False
+
+
+def test_reset_after_split_round_clears_all_split_metadata():
+    deck = FixedDeck([8, 8, 10, 7, 3, 4, 10, 6, 9, 8])
+    game = BlackjackGame(deck)
+
+    game.reset()
+    game.step(Action.SPLIT)
+    game.step(Action.STAND)
+    game.step(Action.STAND)
+
+    state = game.reset()
+
+    assert game.player_hands[0].cards == [10, 6]
+    assert game.dealer_hand.cards == [9, 8]
+    assert game.active_hand_index == 0
+    assert game.hand_bets == [1]
+    assert game.is_split_hand == [False]
+    assert game.is_split_aces_hand == [False]
+    assert state.is_split_hand is False
+    assert state.can_split is False
+
+
+def test_dealer_stands_on_soft_17():
+    deck = FixedDeck([10, 8, 1, 6])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [1, 6]
+    assert game.dealer_hand.value() == 17
+
+
+def test_dealer_hits_soft_16():
+    deck = FixedDeck([10, 8, 1, 5, 2])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    game.step(Action.STAND)
+
+    assert game.dealer_hand.cards == [1, 5, 2]
+    assert game.dealer_hand.value() == 18
+
+
+def test_blackjack_like_21_is_not_auto_finished_on_reset():
+    deck = FixedDeck([1, 10, 10, 9])
+    game = BlackjackGame(deck)
+
+    state = game.reset()
+
+    assert state.player_value == 21
+    assert game.done is False
+    assert game.available_actions() == [Action.HIT, Action.STAND, Action.DOUBLE]
+
+
+def test_natural_21_can_stand_and_win_normally():
+    deck = FixedDeck([1, 10, 10, 9])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    next_state, reward, done = game.step(Action.STAND)
+
+    assert next_state is None
+    assert reward == REWARD_WIN
+    assert done is True
