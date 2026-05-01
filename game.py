@@ -41,7 +41,8 @@ class GameState:
     """
     Public game state given to an agent.
 
-    The state describes the current active hand, not all player hands.
+    The state describes the current active hand, not every player hand.
+    The extra boolean fields reduce state aliasing for Q-learning.
     """
 
     def __init__(
@@ -49,20 +50,18 @@ class GameState:
         player_value: int,
         dealer_upcard: int,
         usable_ace: bool,
-        can_double: bool = True,
-        can_split: bool = False,
-        active_hand_index: int = 0,
-        num_hands: int = 1,
+        can_double: bool,
+        can_split: bool,
+        is_split_hand: bool,
     ):
         self.player_value = player_value
         self.dealer_upcard = dealer_upcard
         self.usable_ace = usable_ace
         self.can_double = can_double
         self.can_split = can_split
-        self.active_hand_index = active_hand_index
-        self.num_hands = num_hands
+        self.is_split_hand = is_split_hand
 
-    def as_tuple(self) -> Tuple[int, int, bool, bool, bool, int, int]:
+    def as_tuple(self) -> Tuple[int, int, bool, bool, bool, bool]:
         """
         Useful as a Q-table key.
         """
@@ -72,8 +71,7 @@ class GameState:
             self.usable_ace,
             self.can_double,
             self.can_split,
-            self.active_hand_index,
-            self.num_hands,
+            self.is_split_hand,
         )
 
     def __repr__(self):
@@ -84,8 +82,7 @@ class GameState:
             f"usable_ace={self.usable_ace}, "
             f"can_double={self.can_double}, "
             f"can_split={self.can_split}, "
-            f"active_hand_index={self.active_hand_index}, "
-            f"num_hands={self.num_hands})"
+            f"is_split_hand={self.is_split_hand})"
         )
 
 
@@ -106,12 +103,11 @@ class BlackjackGame:
             agent.learn(state, action, reward, next_state, done)
             state = next_state
 
-    Important behavior:
-    - HIT draws one card for the active hand.
-    - STAND finishes only the active hand.
-    - DOUBLE draws one card, doubles that hand's reward, then finishes it.
-    - SPLIT replaces the active hand with two hands and plays them left-to-right.
-    - Dealer plays only after all non-busted player hands are finished.
+    Notes:
+    - Double gives one card, immediately finishes the current hand, and doubles
+      that hand's final reward.
+    - Split turns the current hand into two hands. The game then plays each hand
+      from left to right before the dealer plays.
     """
 
     def __init__(self, deck: Optional[Deck] = None):
@@ -119,30 +115,20 @@ class BlackjackGame:
         self.player_hands: List[Hand] = []
         self.dealer_hand: Optional[Hand] = None
         self.active_hand_index = 0
-
-        # Each hand starts with bet multiplier 1.
-        # A doubled hand has multiplier DOUBLE_REWARD_MULTIPLIER.
         self.hand_bets: List[int] = []
-
-        # Per-hand flag: True if this hand came from splitting aces.
-        self.split_aces: List[bool] = []
-
+        self.is_split_hand: List[bool] = []
+        self.is_split_aces_hand: List[bool] = []
         self.done = False
 
     @property
     def player_hand(self) -> Optional[Hand]:
         """
         Backward-compatible access to the current active hand.
-
-        Older code/tests may still refer to game.player_hand. New code should
-        prefer current_hand() because split creates multiple player hands.
         """
         if not self.player_hands:
             return None
-
         if self.active_hand_index >= len(self.player_hands):
             return self.player_hands[-1]
-
         return self.player_hands[self.active_hand_index]
 
     def reset(self) -> GameState:
@@ -155,7 +141,8 @@ class BlackjackGame:
         self.dealer_hand = Hand(self.deck)
         self.active_hand_index = 0
         self.hand_bets = [1]
-        self.split_aces = [False]
+        self.is_split_hand = [False]
+        self.is_split_aces_hand = [False]
         self.done = False
 
         return self.get_state()
@@ -175,8 +162,7 @@ class BlackjackGame:
             usable_ace=hand.usable_ace(),
             can_double=self._can_double_current_hand(),
             can_split=self._can_split_current_hand(),
-            active_hand_index=self.active_hand_index,
-            num_hands=len(self.player_hands),
+            is_split_hand=self.is_split_hand[self.active_hand_index],
         )
 
     def current_hand(self) -> Hand:
@@ -247,9 +233,6 @@ class BlackjackGame:
     def _player_double(self) -> Tuple[Optional[GameState], int, bool]:
         """
         Player doubles the current hand.
-
-        The player receives exactly one card, then the hand is finished.
-        The final reward for this hand is multiplied by DOUBLE_REWARD_MULTIPLIER.
         """
         hand = self.current_hand()
         hand.hit()
@@ -262,23 +245,26 @@ class BlackjackGame:
         Player splits the current hand into two hands.
         """
         hand = self.current_hand()
-        is_splitting_aces = hand.cards[0] == 1 and hand.cards[1] == 1
-
         first_hand, second_hand = hand.split()
+
+        split_aces = hand.cards[0] == 1
+        current_bet = self.hand_bets[self.active_hand_index]
 
         self.player_hands[self.active_hand_index] = first_hand
         self.player_hands.insert(self.active_hand_index + 1, second_hand)
 
-        current_bet = self.hand_bets[self.active_hand_index]
+        self.hand_bets[self.active_hand_index] = current_bet
         self.hand_bets.insert(self.active_hand_index + 1, current_bet)
 
-        self.split_aces[self.active_hand_index] = is_splitting_aces
-        self.split_aces.insert(self.active_hand_index + 1, is_splitting_aces)
+        self.is_split_hand[self.active_hand_index] = True
+        self.is_split_hand.insert(self.active_hand_index + 1, True)
 
-        # Common rule: split aces receive one card each and cannot be hit.
-        # Since Hand.split() already dealt one card to each ace, the first hand
-        # is immediately finished and play moves to the second split-ace hand.
-        if is_splitting_aces and not ALLOW_HIT_SPLIT_ACES:
+        self.is_split_aces_hand[self.active_hand_index] = split_aces
+        self.is_split_aces_hand.insert(self.active_hand_index + 1, split_aces)
+
+        # Many blackjack tables allow only one card per split ace.
+        # If that rule is active, immediately finish the first split-ace hand.
+        if split_aces and not ALLOW_HIT_SPLIT_ACES:
             return self._finish_current_hand()
 
         return self.get_state(), 0, False
@@ -287,40 +273,34 @@ class BlackjackGame:
         """
         Finish the current hand and advance to the next hand.
 
-        If all player hands are finished, the dealer plays once if at least one
-        player hand is still alive. If all player hands busted, the round ends
-        immediately without making the dealer draw extra test-only cards.
+        If all player hands are finished, the dealer plays and the episode ends.
+        If every player hand is already bust, the dealer does not need to draw.
         """
         self.active_hand_index += 1
 
         if self.active_hand_index < len(self.player_hands):
             return self.get_state(), 0, False
 
-        if self._all_player_hands_bust():
-            self.done = True
-            return None, self._total_reward(), True
+        if not self._all_player_hands_bust():
+            self._play_dealer_turn()
 
-        self._play_dealer_turn()
         reward = self._total_reward()
         self.done = True
 
         return None, reward, True
 
+    def _all_player_hands_bust(self) -> bool:
+        """
+        Whether every player hand is bust.
+        """
+        return all(hand.is_bust() for hand in self.player_hands)
+
     def _play_dealer_turn(self):
         """
         Dealer hits until reaching stand threshold.
         """
-        if self.dealer_hand is None:
-            raise RuntimeError("Game has not been reset yet.")
-
         while self.dealer_hand.value() < DEALER_STAND_THRESHOLD:
             self.dealer_hand.hit()
-
-    def _all_player_hands_bust(self) -> bool:
-        """
-        Whether every player hand has busted.
-        """
-        return all(hand.is_bust() for hand in self.player_hands)
 
     def _total_reward(self) -> int:
         """
@@ -337,9 +317,6 @@ class BlackjackGame:
         """
         Compare one player hand to the dealer hand.
         """
-        if self.dealer_hand is None:
-            raise RuntimeError("Game has not been reset yet.")
-
         player_value = hand.value()
         dealer_value = self.dealer_hand.value()
 
@@ -360,8 +337,6 @@ class BlackjackGame:
     def _compare_hands(self) -> int:
         """
         Backward-compatible final comparison helper.
-
-        With split support, this returns the total reward across all player hands.
         """
         return self._total_reward()
 
@@ -377,10 +352,10 @@ class BlackjackGame:
         if len(hand.cards) != 2:
             return False
 
-        if self.split_aces[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
+        if self.is_split_aces_hand[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
             return False
 
-        if len(self.player_hands) > 1 and not ALLOW_DOUBLE_AFTER_SPLIT:
+        if self.is_split_hand[self.active_hand_index] and not ALLOW_DOUBLE_AFTER_SPLIT:
             return False
 
         return True
@@ -395,10 +370,10 @@ class BlackjackGame:
         if len(self.player_hands) >= MAX_PLAYER_HANDS:
             return False
 
-        if len(self.player_hands) > 1 and not ALLOW_RESPLIT:
+        if self.is_split_hand[self.active_hand_index] and not ALLOW_RESPLIT:
             return False
 
-        if self.split_aces[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
+        if self.is_split_aces_hand[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
             return False
 
         return self.current_hand().can_split()
@@ -410,12 +385,7 @@ class BlackjackGame:
         if self.done:
             return []
 
-        if not self.player_hands or self.dealer_hand is None:
-            raise RuntimeError("Game has not been reset yet.")
-
-        # Split aces rule: once an ace hand has received its one extra card,
-        # the only legal action is to stand and move on/end the round.
-        if self.split_aces[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
+        if self.is_split_aces_hand[self.active_hand_index] and not ALLOW_HIT_SPLIT_ACES:
             return [Action.STAND]
 
         actions = [Action.HIT, Action.STAND]
@@ -439,7 +409,12 @@ class BlackjackGame:
         for index, hand in enumerate(self.player_hands):
             marker = " <- active" if not self.done and index == self.active_hand_index else ""
             bet = self.hand_bets[index]
-            print(f"Player hand {index + 1}: {hand}, bet={bet}{marker}")
+            split_text = ", split" if self.is_split_hand[index] else ""
+            split_aces_text = ", split aces" if self.is_split_aces_hand[index] else ""
+            print(
+                f"Player hand {index + 1}: {hand}, "
+                f"bet={bet}{split_text}{split_aces_text}{marker}"
+            )
 
         if self.done:
             print(f"Dealer: {self.dealer_hand}")
