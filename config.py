@@ -28,9 +28,23 @@ EPSILON_DECAY = 0.99999      # decay per step (not per episode)
 
 DEALER_STAND_THRESHOLD = 17  # dealer stands on 17+
 
-# Infinite deck (card distribution)
+# Infinite deck card distribution.
+# Ace is represented as 1. Face cards are represented as 10.
 CARD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9,
                10, 10, 10, 10]  # 10, J, Q, K
+
+# Double-down settings.
+# In standard blackjack, double is usually available only as the first decision
+# on a two-card hand. The game environment will enforce this.
+DOUBLE_REWARD_MULTIPLIER = 2
+
+# Split settings.
+# These constants are not used by cards.py directly, but they give game.py
+# one clear place to read the rule choices from when split is implemented.
+MAX_PLAYER_HANDS = 4
+ALLOW_RESPLIT = True
+ALLOW_DOUBLE_AFTER_SPLIT = True
+ALLOW_HIT_SPLIT_ACES = False
 
 # =========================
 # Rewards

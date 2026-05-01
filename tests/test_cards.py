@@ -19,6 +19,11 @@ class FixedDeck:
         return card
 
 
+# =========================
+# Existing behavior
+# =========================
+
+
 def test_deck_draw_card_returns_valid_value():
     deck = Deck()
 
@@ -98,3 +103,169 @@ def test_repr_contains_cards_and_value():
     assert "Hand" in text
     assert "cards=[10, 6]" in text
     assert "value=16" in text
+
+
+# =========================
+# New constructor behavior
+# =========================
+
+
+def test_hand_can_be_created_without_initial_deal():
+    deck = FixedDeck([10, 6])
+    hand = Hand(deck, deal_initial=False)
+
+    assert hand.cards == []
+    assert hand.value() == 0
+    assert deck.index == 0
+
+
+def test_hand_without_initial_deal_can_still_hit():
+    deck = FixedDeck([10, 6])
+    hand = Hand(deck, deal_initial=False)
+
+    hand.hit()
+
+    assert hand.cards == [10]
+    assert hand.value() == 10
+    assert deck.index == 1
+
+
+def test_from_cards_creates_hand_without_drawing_from_deck():
+    deck = FixedDeck([5, 6])
+    hand = Hand.from_cards(deck, [10, 1])
+
+    assert hand.cards == [10, 1]
+    assert hand.value() == 21
+    assert deck.index == 0
+
+
+def test_from_cards_copies_input_iterable():
+    deck = FixedDeck([5])
+    cards = [8, 8]
+    hand = Hand.from_cards(deck, cards)
+
+    cards.append(10)
+
+    assert hand.cards == [8, 8]
+
+
+# =========================
+# New split behavior
+# =========================
+
+
+def test_can_split_true_for_matching_pair():
+    deck = FixedDeck([8, 8])
+    hand = Hand(deck)
+
+    assert hand.can_split() is True
+
+
+def test_can_split_true_for_pair_of_aces():
+    deck = FixedDeck([1, 1])
+    hand = Hand(deck)
+
+    assert hand.can_split() is True
+
+
+def test_can_split_true_for_pair_of_tens():
+    deck = FixedDeck([10, 10])
+    hand = Hand(deck)
+
+    assert hand.can_split() is True
+
+
+def test_can_split_false_for_non_matching_two_card_hand():
+    deck = FixedDeck([10, 9])
+    hand = Hand(deck)
+
+    assert hand.can_split() is False
+
+
+def test_can_split_false_when_hand_has_more_than_two_cards():
+    deck = FixedDeck([8, 8, 3])
+    hand = Hand(deck)
+    hand.hit()
+
+    assert hand.cards == [8, 8, 3]
+    assert hand.can_split() is False
+
+
+def test_split_creates_two_new_hands_and_deals_one_card_to_each():
+    # Initial hand: [8, 8]
+    # After split, first hand gets 3 and second hand gets 10.
+    deck = FixedDeck([8, 8, 3, 10])
+    hand = Hand(deck)
+
+    first_hand, second_hand = hand.split()
+
+    assert first_hand.cards == [8, 3]
+    assert second_hand.cards == [8, 10]
+    assert first_hand.value() == 11
+    assert second_hand.value() == 18
+    assert deck.index == 4
+
+
+def test_split_hands_share_same_deck():
+    deck = FixedDeck([7, 7, 2, 3, 4])
+    hand = Hand(deck)
+
+    first_hand, second_hand = hand.split()
+    first_hand.hit()
+
+    assert first_hand.deck is deck
+    assert second_hand.deck is deck
+    assert first_hand.cards == [7, 2, 4]
+    assert second_hand.cards == [7, 3]
+
+
+def test_split_raises_value_error_for_non_pair():
+    deck = FixedDeck([10, 9])
+    hand = Hand(deck)
+
+    with pytest.raises(ValueError):
+        hand.split()
+
+
+def test_split_raises_value_error_after_hit_even_if_first_two_cards_match():
+    deck = FixedDeck([8, 8, 2])
+    hand = Hand(deck)
+    hand.hit()
+
+    with pytest.raises(ValueError):
+        hand.split()
+
+
+# =========================
+# New blackjack behavior
+# =========================
+
+
+def test_is_blackjack_true_for_ace_and_ten():
+    deck = FixedDeck([1, 10])
+    hand = Hand(deck)
+
+    assert hand.is_blackjack() is True
+
+
+def test_is_blackjack_true_for_ten_and_ace():
+    deck = FixedDeck([10, 1])
+    hand = Hand(deck)
+
+    assert hand.is_blackjack() is True
+
+
+def test_is_blackjack_false_for_three_card_twenty_one():
+    deck = FixedDeck([1, 5, 5])
+    hand = Hand(deck)
+    hand.hit()
+
+    assert hand.value() == 21
+    assert hand.is_blackjack() is False
+
+
+def test_is_blackjack_false_for_two_card_non_twenty_one():
+    deck = FixedDeck([10, 9])
+    hand = Hand(deck)
+
+    assert hand.is_blackjack() is False
