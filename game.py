@@ -225,6 +225,42 @@ class BlackjackGame:
 
         return self.get_state()
 
+    def reset_with_cards(self, player_cards, dealer_cards) -> Optional[GameState]:
+        """
+        Start a round from specific player and dealer cards.
+
+        Used for exploring-start training (forcing uncommon states).
+
+        Args:
+            player_cards: list[int], e.g. [9, 9] or [1, 7]
+            dealer_cards: list[int], must have at least 2 cards
+
+        Returns:
+            GameState or None (if dealer has blackjack and round ends immediately)
+        """
+        self.deck.reset()
+
+        # Build player hand from specified cards
+        self.hand_states = [
+            PlayerHandState(hand=Hand.from_cards(self.deck, player_cards))
+        ]
+
+        # Build dealer hand from specified cards
+        self.dealer_hand = Hand.from_cards(self.deck, dealer_cards)
+
+        self.active_hand_index = 0
+        self.done = False
+        self.round_reward = None
+        self.initial_dealer_blackjack = False
+
+        # Handle immediate dealer blackjack (same as reset())
+        if self._dealer_has_blackjack():
+            self.initial_dealer_blackjack = True
+            self._finish_round(dealer_already_resolved=True)
+            return None
+
+        return self.get_state()
+
     def get_state(self) -> GameState:
         """
         Return the state visible to the agent.

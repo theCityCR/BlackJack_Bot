@@ -5,9 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12928e1e-eba6-47d1-8d14-c58a23b30dd4" name="Changes" comment="-">
+      <change afterPath="$PROJECT_DIR$/training/run_rule_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/q_learning_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/rule_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/rule_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_game.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_q_learning_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_rule_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_rule_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/training/train_q_learning_1.py" beforeDir="false" afterPath="$PROJECT_DIR$/training/train_q_learning_1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/training/train_q_learning_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/training/train_q_learning_2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/training/train_q_learning_3.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training/train_q_learning_4.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,33 +58,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python tests.Python tests in test_cards.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_game.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_q_learning_agent.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests in test_rule_agent.py.executor&quot;: &quot;Run&quot;,
-    &quot;Python.game.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train_q_learning_1.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train_q_learning_2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train_q_learning_3.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train_q_learning_4.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python tests.Python tests in test_cards.py.executor": "Run",
+    "Python tests.Python tests in test_game.py.executor": "Run",
+    "Python tests.Python tests in test_q_learning_agent.py.executor": "Run",
+    "Python tests.Python tests in test_rule_agent.py.executor": "Run",
+    "Python.game.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.run_rule_agent.executor": "Run",
+    "Python.train_q_learning_1.executor": "Run",
+    "Python.train_q_learning_2.executor": "Run",
+    "Python.train_q_learning_3.executor": "Run",
+    "Python.train_q_learning_4.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -189,7 +199,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777654923303</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="-">
+      <option name="closed" value="true" />
+      <created>1777670877518</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1777670877518</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -200,12 +218,13 @@
     <option name="LAST_COMMIT_MESSAGE" value="-" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_2.coverage" NAME="train_q_learning_2 Coverage Results" MODIFIED="1777519937185" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_4.coverage" NAME="train_q_learning_4 Coverage Results" MODIFIED="1777520560804" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_2.coverage" NAME="train_q_learning_2 Coverage Results" MODIFIED="1777680441992" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$run_rule_agent.coverage" NAME="run_rule_agent Coverage Results" MODIFIED="1777680217509" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$game.coverage" NAME="game Coverage Results" MODIFIED="1777654111581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_4.coverage" NAME="train_q_learning_4 Coverage Results" MODIFIED="1777678864617" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$main.coverage" NAME="main Coverage Results" MODIFIED="1777602543176" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_1.coverage" NAME="train_q_learning_1 Coverage Results" MODIFIED="1777519853820" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_1.coverage" NAME="train_q_learning_1 Coverage Results" MODIFIED="1777680224180" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_3.coverage" NAME="train_q_learning_3 Coverage Results" MODIFIED="1777519964030" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$.coverage" NAME=" Coverage Results" MODIFIED="1777670530801" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$.coverage" NAME=" Coverage Results" MODIFIED="1777679661076" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
