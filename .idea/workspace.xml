@@ -5,18 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12928e1e-eba6-47d1-8d14-c58a23b30dd4" name="Changes" comment="-">
-      <change afterPath="$PROJECT_DIR$/training/run_rule_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/training/train_q_learning_3.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/training/train_q_learning_4.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agents/q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/q_learning_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agents/rule_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/rule_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_q_learning_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_rule_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_rule_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/training/train_q_learning_1.py" beforeDir="false" afterPath="$PROJECT_DIR$/training/train_q_learning_1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/training/train_q_learning_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/training/train_q_learning_2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/training/train_q_learning_3.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/training/train_q_learning_4.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,7 +24,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="f5bfa6d584465634006b65fce4e3bf5a96b7900d" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -75,7 +66,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "complete__q__learning",
     "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -207,7 +198,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777670877518</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="-">
+      <option name="closed" value="true" />
+      <created>1777680538982</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1777680538982</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -218,13 +217,13 @@
     <option name="LAST_COMMIT_MESSAGE" value="-" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_2.coverage" NAME="train_q_learning_2 Coverage Results" MODIFIED="1777680441992" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$run_rule_agent.coverage" NAME="run_rule_agent Coverage Results" MODIFIED="1777680217509" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_2.coverage" NAME="train_q_learning_2 Coverage Results" MODIFIED="1777682551851" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$run_rule_agent.coverage" NAME="run_rule_agent Coverage Results" MODIFIED="1777680528633" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$game.coverage" NAME="game Coverage Results" MODIFIED="1777654111581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_4.coverage" NAME="train_q_learning_4 Coverage Results" MODIFIED="1777678864617" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_4.coverage" NAME="train_q_learning_4 Coverage Results" MODIFIED="1777682834836" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$main.coverage" NAME="main Coverage Results" MODIFIED="1777602543176" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_1.coverage" NAME="train_q_learning_1 Coverage Results" MODIFIED="1777680224180" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_3.coverage" NAME="train_q_learning_3 Coverage Results" MODIFIED="1777519964030" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$.coverage" NAME=" Coverage Results" MODIFIED="1777679661076" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_3.coverage" NAME="train_q_learning_3 Coverage Results" MODIFIED="1777682694182" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
   </component>
 </project>
