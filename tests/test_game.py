@@ -242,7 +242,7 @@ def test_double_consumes_one_card_and_terminal_state_has_no_next_state():
 
 
 def test_game_reset_does_not_reshuffle_finite_deck_when_above_threshold():
-    deck = Deck(shuffle=False, reshuffle_threshold=15)
+    deck = Deck(num_decks=2, shuffle=False, reshuffle_threshold=26)
     game = BlackjackGame(deck)
 
     state_1 = game.reset()
@@ -256,23 +256,23 @@ def test_game_reset_does_not_reshuffle_finite_deck_when_above_threshold():
     assert state_1 is not None
     assert state_2 is not None
     assert cards_after_second_reset < cards_after_first_reset
-    assert cards_after_second_reset != 52
+    assert cards_after_second_reset != 52 * deck.num_decks
 
 
-def test_game_reset_reshuffles_finite_deck_when_below_threshold():
-    deck = Deck(shuffle=False, reshuffle_threshold=49)
+def test_game_reset_reshuffles_finite_deck_when_at_or_below_threshold():
+    deck = Deck(num_decks=2, shuffle=False, reshuffle_threshold=100)
     game = BlackjackGame(deck)
 
     game.reset()
-    assert deck.cards_remaining() == 48
+    assert deck.cards_remaining() == 52 * deck.num_decks - 4
 
     game.step(Action.STAND)
 
     game.reset()
 
-    # At the start of second reset, the shoe is below 49, so it force-resets
-    # to 52, then deals 4 cards.
-    assert deck.cards_remaining() == 48
+    # At the start of the second reset, the shoe is at or below threshold,
+    # so it force-resets to full shoe, then deals 4 cards.
+    assert deck.cards_remaining() == 52 * deck.num_decks - 4
 
 
 # =========================

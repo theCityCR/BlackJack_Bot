@@ -4,13 +4,27 @@ from agents.rule_agent.rule_agent import RuleAgent
 from game import BlackjackGame
 
 
-# =========================
-# Configuration
-# =========================
-NUM_EPISODES = 500000   # <-- change this freely
+NUM_EPISODES = 500_000
 
 
-def run_simulation(num_episodes):
+def categorize_reward(reward: float) -> str:
+    if reward == 0:
+        return "draw"
+    if reward == 1:
+        return "normal_win"
+    if reward == -1:
+        return "normal_loss"
+    if reward == 1.5:
+        return "blackjack_win"
+    if reward > 1:
+        return "big_win_double_or_split"
+    if reward < -1:
+        return "big_loss_double_or_split"
+
+    return "other"
+
+
+def run_simulation(num_episodes: int):
     game = BlackjackGame()
     agent = RuleAgent()
 
@@ -21,16 +35,8 @@ def run_simulation(num_episodes):
         reward = agent.play_episode(game)
         total_reward += reward
 
-        if reward == 1:
-            distribution["win"] += 1
-        elif reward == -1:
-            distribution["loss"] += 1
-        elif reward == 0:
-            distribution["draw"] += 1
-        elif reward > 1:
-            distribution["big_win (blackjack/double/split)"] += 1
-        elif reward < -1:
-            distribution["big_loss (double/split)"] += 1
+        category = categorize_reward(reward)
+        distribution[category] += 1
 
     avg_reward = total_reward / num_episodes
 
@@ -45,8 +51,11 @@ def main():
     print("\nDistribution:")
 
     total = sum(distribution.values())
-    for k, v in distribution.items():
-        print(f"{k:35s}: {v} ({v/total:.2%})")
+
+    for category in sorted(distribution):
+        count = distribution[category]
+        percentage = count / total
+        print(f"{category:30s}: {count:8d} ({percentage:.2%})")
 
 
 if __name__ == "__main__":

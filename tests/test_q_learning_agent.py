@@ -1,6 +1,6 @@
 import pytest
 
-from agents.q_learning_simple.q_learning_agent import QLearningAgent
+from agents.deprecated.q_learning_simple.q_learning_agent import QLearningAgent
 from game import Action, GameState
 
 

@@ -29,11 +29,11 @@ EPSILON_DECAY = 0.99999
 DEALER_STAND_THRESHOLD = 17
 
 # Finite deck settings.
-NUM_DECKS = 1
+NUM_DECKS = 2
 
 # The game should not reshuffle every round.
 # It should reshuffle only when the remaining deck is low.
-RESHUFFLE_WHEN_CARDS_REMAINING_BELOW = 15
+RESHUFFLE_WHEN_CARDS_REMAINING_BELOW = 26
 
 # Kept for compatibility with older code/tests.
 CARD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9,

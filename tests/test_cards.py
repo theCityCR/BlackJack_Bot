@@ -280,116 +280,143 @@ def test_is_blackjack_false_for_two_card_non_twenty_one():
 # =========================
 
 
-def test_finite_deck_starts_with_52_cards_by_default():
-    deck = Deck(shuffle=False)
-
-    assert deck.cards_remaining() == 52
+def expected_count_vector(num_decks):
+    return tuple([4 * num_decks] * 9 + [16 * num_decks])
 
 
-def test_finite_deck_has_correct_single_deck_count_vector():
-    deck = Deck(shuffle=False)
+@pytest.mark.parametrize("num_decks", [1, 2, 4, 6])
+def test_finite_deck_total_cards_scales_with_num_decks(num_decks):
+    deck = Deck(num_decks=num_decks, shuffle=False)
 
-    assert deck.get_count_vector() == (
-        4,   # A
-        4,   # 2
-        4,   # 3
-        4,   # 4
-        4,   # 5
-        4,   # 6
-        4,   # 7
-        4,   # 8
-        4,   # 9
-        16,  # 10/J/Q/K
-    )
+    assert deck.cards_remaining() == 52 * num_decks
 
 
-def test_drawing_card_reduces_cards_remaining():
-    deck = Deck(shuffle=False)
+@pytest.mark.parametrize("num_decks", [1, 2, 4, 6])
+def test_finite_deck_count_vector_scales_with_num_decks(num_decks):
+    deck = Deck(num_decks=num_decks, shuffle=False)
+
+    assert deck.get_count_vector() == expected_count_vector(num_decks)
+
+
+def test_deck_draw_card_returns_valid_value():
+    deck = Deck()
+
+    initial_cards_remaining = deck.cards_remaining()
+
+    for _ in range(initial_cards_remaining):
+        card = deck.draw_card()
+        assert card in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+    assert deck.cards_remaining() == 0
+
+
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_drawing_card_reduces_cards_remaining(num_decks):
+    deck = Deck(num_decks=num_decks, shuffle=False)
 
     old_remaining = deck.cards_remaining()
     card = deck.draw_card()
 
-    assert card in range(1, 11)
+    assert card in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
     assert deck.cards_remaining() == old_remaining - 1
 
 
-def test_drawing_card_updates_count_vector():
-    deck = Deck(shuffle=False)
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_drawing_card_updates_count_vector(num_decks):
+    deck = Deck(num_decks=num_decks, shuffle=False)
 
-    # With shuffle=False, cards are popped from the end.
-    # The end of SINGLE_DECK_CARDS is a 10.
+    before = deck.get_count_vector()
+    card = deck.draw_card()
+    after = deck.get_count_vector()
+
+    card_index = card - 1
+    expected = list(before)
+    expected[card_index] -= 1
+
+    assert after == tuple(expected)
+
+
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_count_remaining_returns_count_for_specific_card_value(num_decks):
+    deck = Deck(num_decks=num_decks, shuffle=False)
+
+    assert deck.count_remaining(1) == 4 * num_decks
+    assert deck.count_remaining(10) == 16 * num_decks
+
     card = deck.draw_card()
 
-    assert card == 10
-    assert deck.get_count_vector() == (
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 15
+    assert deck.count_remaining(card) == expected_count_vector(num_decks)[card - 1] - 1
+
+
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_reset_does_not_reshuffle_when_enough_cards_remain(num_decks):
+    threshold = 26
+    deck = Deck(
+        num_decks=num_decks,
+        shuffle=False,
+        reshuffle_threshold=threshold,
     )
-
-
-def test_count_remaining_returns_count_for_specific_card_value():
-    deck = Deck(shuffle=False)
-
-    assert deck.count_remaining(1) == 4
-    assert deck.count_remaining(10) == 16
-
-    deck.draw_card()
-
-    assert deck.count_remaining(10) == 15
-
-
-def test_multiple_deck_shoe_has_scaled_counts():
-    deck = Deck(num_decks=6, shuffle=False)
-
-    assert deck.cards_remaining() == 312
-    assert deck.get_count_vector() == (
-        24, 24, 24, 24, 24, 24, 24, 24, 24, 96
-    )
-
-
-def test_reset_does_not_reshuffle_when_enough_cards_remain():
-    deck = Deck(shuffle=False, reshuffle_threshold=15)
 
     for _ in range(10):
         deck.draw_card()
 
-    assert deck.cards_remaining() == 42
+    remaining_before = deck.cards_remaining()
 
     deck.reset()
 
-    assert deck.cards_remaining() == 42
+    assert deck.cards_remaining() == remaining_before
 
 
-def test_reset_reshuffles_when_below_threshold():
-    deck = Deck(shuffle=False, reshuffle_threshold=15)
-
-    while deck.cards_remaining() >= 15:
-        deck.draw_card()
-
-    assert deck.cards_remaining() == 14
-
-    deck.reset()
-
-    assert deck.cards_remaining() == 52
-    assert deck.get_count_vector() == (
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 16
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_reset_reshuffles_when_at_or_below_threshold(num_decks):
+    threshold = 26
+    deck = Deck(
+        num_decks=num_decks,
+        shuffle=False,
+        reshuffle_threshold=threshold,
     )
 
+    while deck.cards_remaining() > threshold:
+        deck.draw_card()
 
-def test_force_reset_always_restores_full_deck():
-    deck = Deck(shuffle=False, reshuffle_threshold=15)
+    assert deck.cards_remaining() == threshold
+
+    deck.reset()
+
+    assert deck.cards_remaining() == 52 * num_decks
+    assert deck.get_count_vector() == expected_count_vector(num_decks)
+
+
+@pytest.mark.parametrize("num_decks", [1, 2, 4])
+def test_force_reset_always_restores_full_deck(num_decks):
+    deck = Deck(
+        num_decks=num_decks,
+        shuffle=False,
+        reshuffle_threshold=26,
+    )
 
     for _ in range(20):
         deck.draw_card()
 
-    assert deck.cards_remaining() == 32
+    assert deck.cards_remaining() == 52 * num_decks - 20
 
     deck.force_reset()
 
-    assert deck.cards_remaining() == 52
+    assert deck.cards_remaining() == 52 * num_decks
+    assert deck.get_count_vector() == expected_count_vector(num_decks)
+
+
+def test_count_vector_sum_matches_remaining_cards():
+    deck = Deck(num_decks=3, shuffle=False)
+
+    for _ in range(17):
+        deck.draw_card()
+
+    assert sum(deck.get_count_vector()) == deck.cards_remaining()
 
 
 def test_draw_from_empty_deck_raises_runtime_error():
-    deck = Deck(shuffle=False)
+    deck = Deck(num_decks=1, shuffle=False)
 
     for _ in range(52):
         deck.draw_card()

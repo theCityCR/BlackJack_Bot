@@ -1,6 +1,6 @@
 import torch
 
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent, ACTION_LIST
+from agents.deprecated.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent, ACTION_LIST
 from game import Action, BlackjackGame, GameState
 
 

@@ -72,10 +72,11 @@ class Deck:
         """
         Prepare the deck for a new round.
 
-        This intentionally does not reshuffle every round.
-        It reshuffles only when the remaining shoe is too low.
+        This does not reshuffle every round.
+        It reshuffles only when the remaining shoe is low enough that the next
+        round may run out of cards.
         """
-        if self.cards_remaining() < self.reshuffle_threshold:
+        if self.cards_remaining() <= self.reshuffle_threshold:
             self.force_reset()
 
     def draw_card(self) -> int:
