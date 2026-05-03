@@ -31,22 +31,22 @@ class DuelingDQN(nn.Module):
         super().__init__()
 
         self.feature_layer = nn.Sequential(
-            nn.Linear(input_size, 256),
+            nn.Linear(input_size, 128),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(128, 128),
             nn.ReLU(),
         )
 
         self.value_stream = nn.Sequential(
-            nn.Linear(256, 128),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(128, 1),
+            nn.Linear(64, 1),
         )
 
         self.advantage_stream = nn.Sequential(
-            nn.Linear(256, 128),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(128, output_size),
+            nn.Linear(64, output_size),
         )
 
     def forward(self, x):

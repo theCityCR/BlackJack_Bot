@@ -7,7 +7,7 @@ from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
 from game import BlackjackGame
 
 
-NUM_TRAINING_EPISODES = 200_000
+NUM_TRAINING_EPISODES = 100_000
 FINAL_EVALUATION_EPISODES = 100_000
 PRINT_INTERVAL = 5_000
 
@@ -84,10 +84,10 @@ def train():
         epsilon_min=0.05,
         epsilon_decay=0.99995,
         replay_size=100_000,
-        batch_size=256,
+        batch_size=128,
         target_update_interval=5_000,
-        min_replay_size=5_000,
-        train_updates_per_episode=1,
+        min_replay_size=1_000,
+        train_updates_per_episode=2,
     )
 
     interval_reward = 0.0
