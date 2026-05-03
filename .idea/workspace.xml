@@ -5,9 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12928e1e-eba6-47d1-8d14-c58a23b30dd4" name="Changes" comment="-">
+      <change afterPath="$PROJECT_DIR$/tests/test_double_q_network_learning_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_deep_q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/deprecated/test_deep_q_learning_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_q_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/deprecated/test_q_learning_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/double_q_network_learning/double_q_network_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/double_q_network_learning/double_q_network_learning_agent.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -245,7 +245,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777781764817</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="-">
+      <option name="closed" value="true" />
+      <created>1777782576627</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1777782576627</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

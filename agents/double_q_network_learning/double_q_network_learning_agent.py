@@ -6,11 +6,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from config import MAX_PLAYER_HANDS, NUM_DECKS
 from game import Action, BlackjackGame, GameState
 
 
 ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
-ACTION_TO_INDEX = {action: i for i, action in enumerate(ACTION_LIST)}
+ACTION_TO_INDEX = {action: index for index, action in enumerate(ACTION_LIST)}
+
+INITIAL_SHOE_SIZE = 52 * NUM_DECKS
 
 
 @dataclass
@@ -23,14 +26,16 @@ class Transition:
     next_legal_action_indices: list[int]
 
 
-class DQN(nn.Module):
+class DoubleQNetwork(nn.Module):
     def __init__(self, input_size: int, output_size: int):
         super().__init__()
 
         self.net = nn.Sequential(
-            nn.Linear(input_size, 64),
+            nn.Linear(input_size, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, output_size),
         )
@@ -39,7 +44,7 @@ class DQN(nn.Module):
         return self.net(x)
 
 
-class DeepQLearningAgent:
+class DoubleQNetworkLearningAgent:
     def __init__(
         self,
         learning_rate=0.0005,
@@ -49,8 +54,8 @@ class DeepQLearningAgent:
         epsilon_decay=0.99995,
         replay_size=100_000,
         batch_size=128,
-        target_update_interval=5000,
-        min_replay_size=1000,
+        target_update_interval=5_000,
+        min_replay_size=1_000,
         train_updates_per_episode=2,
     ):
         self.discount_factor = discount_factor
@@ -64,28 +69,47 @@ class DeepQLearningAgent:
         self.min_replay_size = min_replay_size
         self.train_updates_per_episode = train_updates_per_episode
 
-        self.model = DQN(input_size=8, output_size=4)
-        self.target_model = DQN(input_size=8, output_size=4)
+        # 9 basic game features + 10 normalized remaining-card counts.
+        self.input_size = 19
+        self.output_size = len(ACTION_LIST)
+
+        self.model = DoubleQNetwork(self.input_size, self.output_size)
+        self.target_model = DoubleQNetwork(self.input_size, self.output_size)
         self.target_model.load_state_dict(self.model.state_dict())
+        self.target_model.eval()
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.SmoothL1Loss()
 
         self.replay_buffer = deque(maxlen=replay_size)
         self.training_steps = 0
 
     def encode_state(self, state: GameState) -> torch.Tensor:
+        count_vector = tuple(state.count_vector)
+        cards_remaining = sum(count_vector)
+
+        if cards_remaining == 0:
+            normalized_count_vector = [0.0] * 10
+        else:
+            normalized_count_vector = [
+                count / cards_remaining
+                for count in count_vector
+            ]
+
+        basic_state = [
+            state.player_value / 21,
+            state.dealer_upcard / 10,
+            float(state.usable_ace),
+            float(state.can_double),
+            float(state.can_split),
+            float(state.is_split_hand),
+            state.active_hand_index / MAX_PLAYER_HANDS,
+            state.num_hands / MAX_PLAYER_HANDS,
+            cards_remaining / INITIAL_SHOE_SIZE,
+        ]
+
         return torch.tensor(
-            [
-                state.player_value / 21,
-                state.dealer_upcard / 10,
-                float(state.usable_ace),
-                float(state.can_double),
-                float(state.can_split),
-                float(state.is_split_hand),
-                state.active_hand_index / 4,
-                state.num_hands / 4,
-            ],
+            basic_state + normalized_count_vector,
             dtype=torch.float32,
         )
 
@@ -123,7 +147,7 @@ class DeepQLearningAgent:
         done: bool,
         next_available_actions,
     ):
-        next_legal_indices = (
+        next_legal_action_indices = (
             []
             if next_available_actions is None
             else self.legal_action_indices(next_available_actions)
@@ -135,7 +159,7 @@ class DeepQLearningAgent:
             reward=reward,
             next_state=None if next_state is None else self.encode_state(next_state),
             done=done,
-            next_legal_action_indices=next_legal_indices,
+            next_legal_action_indices=next_legal_action_indices,
         )
 
         self.replay_buffer.append(transition)
@@ -146,9 +170,15 @@ class DeepQLearningAgent:
 
         batch = random.sample(self.replay_buffer, self.batch_size)
 
-        states = torch.stack([t.state for t in batch])
-        action_indices = torch.tensor([t.action_index for t in batch])
-        rewards = torch.tensor([t.reward for t in batch], dtype=torch.float32)
+        states = torch.stack([transition.state for transition in batch])
+        action_indices = torch.tensor(
+            [transition.action_index for transition in batch],
+            dtype=torch.long,
+        )
+        rewards = torch.tensor(
+            [transition.reward for transition in batch],
+            dtype=torch.float32,
+        )
 
         current_q_values = self.model(states)
         current_q = current_q_values.gather(
@@ -158,35 +188,39 @@ class DeepQLearningAgent:
 
         targets = rewards.clone()
 
-        non_done_indices = [i for i, t in enumerate(batch) if not t.done]
+        non_done_indices = [
+            index
+            for index, transition in enumerate(batch)
+            if not transition.done
+        ]
 
         if non_done_indices:
             next_states = torch.stack([
-                batch[i].next_state for i in non_done_indices
+                batch[index].next_state
+                for index in non_done_indices
             ])
 
             with torch.no_grad():
                 # Double DQN:
-                # 1. Main model chooses the best next action.
-                next_q_values_main = self.model(next_states)
+                # model chooses the next action.
+                next_q_main = self.model(next_states)
 
-                masked_next_q_values_main = torch.full_like(
-                    next_q_values_main,
+                masked_next_q_main = torch.full_like(
+                    next_q_main,
                     float("-inf"),
                 )
 
                 for row, batch_index in enumerate(non_done_indices):
                     legal_indices = batch[batch_index].next_legal_action_indices
-                    masked_next_q_values_main[row, legal_indices] = (
-                        next_q_values_main[row, legal_indices]
+                    masked_next_q_main[row, legal_indices] = (
+                        next_q_main[row, legal_indices]
                     )
 
-                best_next_action_indices = masked_next_q_values_main.argmax(dim=1)
+                best_next_action_indices = masked_next_q_main.argmax(dim=1)
 
-                # 2. Target model evaluates that chosen action.
-                next_q_values_target = self.target_model(next_states)
-
-                double_dqn_next_q = next_q_values_target.gather(
+                # target_model evaluates the chosen action.
+                next_q_target = self.target_model(next_states)
+                double_dqn_next_q = next_q_target.gather(
                     1,
                     best_next_action_indices.unsqueeze(1),
                 ).squeeze(1)
@@ -199,6 +233,7 @@ class DeepQLearningAgent:
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=10.0)
         self.optimizer.step()
 
         self.training_steps += 1
@@ -231,31 +266,31 @@ class DeepQLearningAgent:
             next_state, round_reward, done = game.step(action)
             next_available_actions = None if done else game.available_actions()
 
-            transitions.append(
-                {
-                    "hand_index": hand_index,
-                    "state": state,
-                    "action": action,
-                    "next_state": next_state,
-                    "next_available_actions": next_available_actions,
-                }
-            )
+            transitions.append({
+                "hand_index": hand_index,
+                "state": state,
+                "action": action,
+                "next_state": next_state,
+                "next_available_actions": next_available_actions,
+            })
 
             state = next_state
 
         hand_rewards = game.hand_rewards
 
-        for i, transition in enumerate(transitions):
+        for index, transition in enumerate(transitions):
             hand_index = transition["hand_index"]
             hand_reward = hand_rewards[hand_index]
 
-            is_last = i == len(transitions) - 1
-            next_is_different_hand = (
-                not is_last
-                and transitions[i + 1]["hand_index"] != hand_index
+            is_last_transition = index == len(transitions) - 1
+            next_transition_is_new_hand = (
+                not is_last_transition
+                and transitions[index + 1]["hand_index"] != hand_index
             )
 
-            terminal_for_this_hand = is_last or next_is_different_hand
+            terminal_for_this_hand = (
+                is_last_transition or next_transition_is_new_hand
+            )
 
             if terminal_for_this_hand:
                 self.remember(
@@ -283,7 +318,7 @@ class DeepQLearningAgent:
         self.decay_epsilon()
         return round_reward
 
-    def play_episode(self, game: BlackjackGame, render=False) -> float:
+    def play_episode(self, game: BlackjackGame, render: bool = False) -> float:
         state = game.reset()
 
         if state is None:
@@ -311,3 +346,7 @@ class DeepQLearningAgent:
             state = next_state
 
         return reward
+
+
+# Backward compatibility with older trainer imports.
+DeepQLearningAgent = DoubleQNetworkLearningAgent
