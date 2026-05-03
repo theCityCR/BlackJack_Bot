@@ -1,6 +1,4 @@
-import pytest
-
-from agents.rule_agent import RuleAgent
+from agents.rule_agent.rule_agent import RuleAgent
 from game import Action, BlackjackGame, GameState
 
 

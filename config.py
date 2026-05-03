@@ -8,8 +8,8 @@ Global configuration values for the Blackjack ML project.
 # Training Settings
 # =========================
 
-NUM_TRAINING_EPISODES = 1_000_000
-EVALUATION_EPISODES = 50_000
+NUM_TRAINING_EPISODES = 50_000
+EVALUATION_EPISODES = 5_000
 
 # =========================
 # Q-Learning Hyperparameters

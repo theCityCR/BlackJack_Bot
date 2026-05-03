@@ -1,13 +1,13 @@
 from collections import defaultdict
 
-from agents.rule_agent import RuleAgent
+from agents.rule_agent.rule_agent import RuleAgent
 from game import BlackjackGame
 
 
 # =========================
 # Configuration
 # =========================
-NUM_EPISODES = 100000   # <-- change this freely
+NUM_EPISODES = 500000   # <-- change this freely
 
 
 def run_simulation(num_episodes):
