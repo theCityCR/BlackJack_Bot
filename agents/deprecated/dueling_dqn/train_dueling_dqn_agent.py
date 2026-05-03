@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import torch
 
-from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
+from agents.deprecated.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
 from game import BlackjackGame
 
 
