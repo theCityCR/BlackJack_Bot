@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="12928e1e-eba6-47d1-8d14-c58a23b30dd4" name="Changes" comment="-">
-      <change afterPath="$PROJECT_DIR$/tests/test_double_q_network_learning_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agents/double_q_network_learning/double_q_network_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/double_q_network_learning/double_q_network_learning_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/double_q_network_learning/train_double_q_network_learning_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/double_q_network_learning/train_double_q_network_learning_agent.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,6 +56,7 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python tests.Python tests in test_cards.py.executor": "Run",
     "Python tests.Python tests in test_deep_q_learning_agent.py.executor": "Run",
+    "Python tests.Python tests in test_double_q_network_learning_agent.py.executor": "Run",
     "Python tests.Python tests in test_game.py.executor": "Run",
     "Python tests.Python tests in test_q_learning_agent.py.executor": "Run",
     "Python tests.Python tests in test_rule_agent.py.executor": "Run",
@@ -253,7 +253,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777782576627</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="-">
+      <option name="closed" value="true" />
+      <created>1777783033278</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1777783033278</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,6 +281,6 @@
     <SUITE FILE_PATH="coverage/BlackJack_Simple$main.coverage" NAME="main Coverage Results" MODIFIED="1777602543176" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_1.coverage" NAME="train_q_learning_1 Coverage Results" MODIFIED="1777680224180" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_3.coverage" NAME="train_q_learning_3 Coverage Results" MODIFIED="1777682694182" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$.coverage" NAME=" Coverage Results" MODIFIED="1777782072053" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$.coverage" NAME=" Coverage Results" MODIFIED="1777783021874" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
