@@ -15,7 +15,6 @@ ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
 ACTION_TO_INDEX = {action: index for index, action in enumerate(ACTION_LIST)}
 
 INITIAL_SHOE_SIZE = 52 * NUM_DECKS
-REWARD_SCALE = 2.0
 
 
 @dataclass
@@ -63,7 +62,7 @@ class DuelingDQN(nn.Module):
 class DuelingDQNAgent:
     def __init__(
         self,
-        learning_rate: float = 0.0005,
+        learning_rate: float = 0.001,
         discount_factor: float = 1.0,
         epsilon: float = 1.0,
         epsilon_min: float = 0.05,
@@ -72,7 +71,7 @@ class DuelingDQNAgent:
         batch_size: int = 256,
         target_update_interval: int = 2_000,
         min_replay_size: int = 5_000,
-        train_updates_per_episode: int = 1,
+        train_updates_per_episode: int = 2,
         device: Optional[str] = None,
     ):
         self.discount_factor = discount_factor
@@ -174,13 +173,11 @@ class DuelingDQNAgent:
             else self.legal_action_indices(next_available_actions)
         )
 
-        scaled_reward = reward / REWARD_SCALE
-
         self.replay_buffer.append(
             Transition(
                 state=self.encode_state(state),
                 action_index=ACTION_TO_INDEX[action],
-                reward=scaled_reward,
+                reward=reward,
                 next_state=None if next_state is None else self.encode_state(next_state),
                 done=done,
                 next_legal_action_indices=next_legal_action_indices,
@@ -238,7 +235,9 @@ class DuelingDQNAgent:
 
                 for row, batch_index in enumerate(non_done_indices):
                     legal_indices = batch[batch_index].next_legal_action_indices
-                    masked_next_q_main[row, legal_indices] = next_q_main[row, legal_indices]
+                    masked_next_q_main[row, legal_indices] = (
+                        next_q_main[row, legal_indices]
+                    )
 
                 best_next_action_indices = masked_next_q_main.argmax(dim=1)
 

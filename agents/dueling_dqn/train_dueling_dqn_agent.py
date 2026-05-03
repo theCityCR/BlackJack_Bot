@@ -78,7 +78,7 @@ def train():
     game = BlackjackGame()
 
     agent = DuelingDQNAgent(
-        learning_rate=0.0005,
+        learning_rate=0.001,
         discount_factor=1.0,
         epsilon=1.0,
         epsilon_min=0.05,
@@ -87,7 +87,7 @@ def train():
         batch_size=256,
         target_update_interval=2_000,
         min_replay_size=5_000,
-        train_updates_per_episode=1,
+        train_updates_per_episode=2,
     )
 
     interval_reward = 0.0
