@@ -15,32 +15,32 @@ EVALUATION_EPISODES = 5_000
 # Q-Learning Hyperparameters
 # =========================
 
-LEARNING_RATE = 0.1          # α
-DISCOUNT_FACTOR = 1.0        # γ (Blackjack is episodic, so 1.0 is fine)
+LEARNING_RATE = 0.1
+DISCOUNT_FACTOR = 1.0
 
-EPSILON_START = 1.0          # initial exploration
-EPSILON_END = 0.05           # minimum exploration
-EPSILON_DECAY = 0.99999      # decay per step (not per episode)
+EPSILON_START = 1.0
+EPSILON_END = 0.05
+EPSILON_DECAY = 0.99999
 
 # =========================
 # Game Settings
 # =========================
 
-DEALER_STAND_THRESHOLD = 17  # dealer stands on 17+
+DEALER_STAND_THRESHOLD = 17
 
-# Infinite deck card distribution.
-# Ace is represented as 1. Face cards are represented as 10.
+# Finite deck settings.
+NUM_DECKS = 1
+
+# The game should not reshuffle every round.
+# It should reshuffle only when the remaining deck is low.
+RESHUFFLE_WHEN_CARDS_REMAINING_BELOW = 15
+
+# Kept for compatibility with older code/tests.
 CARD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9,
-               10, 10, 10, 10]  # 10, J, Q, K
+               10, 10, 10, 10]
 
-# Double-down settings.
-# In standard blackjack, double is usually available only as the first decision
-# on a two-card hand. The game environment will enforce this.
 DOUBLE_REWARD_MULTIPLIER = 2
 
-# Split settings.
-# These constants are not used by cards.py directly, but they give game.py
-# one clear place to read the rule choices from when split is implemented.
 MAX_PLAYER_HANDS = 4
 ALLOW_RESPLIT = True
 ALLOW_DOUBLE_AFTER_SPLIT = True

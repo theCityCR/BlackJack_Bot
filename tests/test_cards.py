@@ -27,9 +27,13 @@ class FixedDeck:
 def test_deck_draw_card_returns_valid_value():
     deck = Deck()
 
-    for _ in range(100):
+    initial_cards_remaining = deck.cards_remaining()
+
+    for _ in range(initial_cards_remaining):
         card = deck.draw_card()
-        assert card in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        assert card in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+    assert deck.cards_remaining() == 0
 
 
 def test_hand_starts_with_two_cards():
@@ -269,3 +273,176 @@ def test_is_blackjack_false_for_two_card_non_twenty_one():
     hand = Hand(deck)
 
     assert hand.is_blackjack() is False
+
+
+# =========================
+# Finite deck behavior
+# =========================
+
+
+def test_finite_deck_starts_with_52_cards_by_default():
+    deck = Deck(shuffle=False)
+
+    assert deck.cards_remaining() == 52
+
+
+def test_finite_deck_has_correct_single_deck_count_vector():
+    deck = Deck(shuffle=False)
+
+    assert deck.get_count_vector() == (
+        4,   # A
+        4,   # 2
+        4,   # 3
+        4,   # 4
+        4,   # 5
+        4,   # 6
+        4,   # 7
+        4,   # 8
+        4,   # 9
+        16,  # 10/J/Q/K
+    )
+
+
+def test_drawing_card_reduces_cards_remaining():
+    deck = Deck(shuffle=False)
+
+    old_remaining = deck.cards_remaining()
+    card = deck.draw_card()
+
+    assert card in range(1, 11)
+    assert deck.cards_remaining() == old_remaining - 1
+
+
+def test_drawing_card_updates_count_vector():
+    deck = Deck(shuffle=False)
+
+    # With shuffle=False, cards are popped from the end.
+    # The end of SINGLE_DECK_CARDS is a 10.
+    card = deck.draw_card()
+
+    assert card == 10
+    assert deck.get_count_vector() == (
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 15
+    )
+
+
+def test_count_remaining_returns_count_for_specific_card_value():
+    deck = Deck(shuffle=False)
+
+    assert deck.count_remaining(1) == 4
+    assert deck.count_remaining(10) == 16
+
+    deck.draw_card()
+
+    assert deck.count_remaining(10) == 15
+
+
+def test_multiple_deck_shoe_has_scaled_counts():
+    deck = Deck(num_decks=6, shuffle=False)
+
+    assert deck.cards_remaining() == 312
+    assert deck.get_count_vector() == (
+        24, 24, 24, 24, 24, 24, 24, 24, 24, 96
+    )
+
+
+def test_reset_does_not_reshuffle_when_enough_cards_remain():
+    deck = Deck(shuffle=False, reshuffle_threshold=15)
+
+    for _ in range(10):
+        deck.draw_card()
+
+    assert deck.cards_remaining() == 42
+
+    deck.reset()
+
+    assert deck.cards_remaining() == 42
+
+
+def test_reset_reshuffles_when_below_threshold():
+    deck = Deck(shuffle=False, reshuffle_threshold=15)
+
+    while deck.cards_remaining() >= 15:
+        deck.draw_card()
+
+    assert deck.cards_remaining() == 14
+
+    deck.reset()
+
+    assert deck.cards_remaining() == 52
+    assert deck.get_count_vector() == (
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 16
+    )
+
+
+def test_force_reset_always_restores_full_deck():
+    deck = Deck(shuffle=False, reshuffle_threshold=15)
+
+    for _ in range(20):
+        deck.draw_card()
+
+    assert deck.cards_remaining() == 32
+
+    deck.force_reset()
+
+    assert deck.cards_remaining() == 52
+
+
+def test_draw_from_empty_deck_raises_runtime_error():
+    deck = Deck(shuffle=False)
+
+    for _ in range(52):
+        deck.draw_card()
+
+    assert deck.cards_remaining() == 0
+
+    with pytest.raises(RuntimeError):
+        deck.draw_card()
+
+
+def test_invalid_num_decks_raises_value_error():
+    with pytest.raises(ValueError):
+        Deck(num_decks=0)
+
+
+def test_invalid_reshuffle_threshold_raises_value_error():
+    with pytest.raises(ValueError):
+        Deck(reshuffle_threshold=-1)
+
+
+def test_invalid_count_remaining_card_value_raises_value_error():
+    deck = Deck()
+
+    with pytest.raises(ValueError):
+        deck.count_remaining(0)
+
+    with pytest.raises(ValueError):
+        deck.count_remaining(11)
+
+
+def test_force_reset_shuffles_when_enabled():
+    deck = Deck(shuffle=True)
+
+    original = list(deck.cards)
+
+    deck.force_reset()
+    new = deck.cards
+
+    # Very small probability of equality, acceptable for test
+    assert original != new
+
+
+def test_multiple_resets_do_not_reshuffle_until_threshold():
+    deck = Deck(shuffle=False, reshuffle_threshold=10)
+
+    # Remove some cards, but stay above threshold
+    for _ in range(20):
+        deck.draw_card()
+
+    remaining_before = deck.cards_remaining()
+
+    # Call reset multiple times
+    for _ in range(5):
+        deck.reset()
+
+    assert deck.cards_remaining() == remaining_before

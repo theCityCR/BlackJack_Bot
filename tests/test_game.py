@@ -1,23 +1,7 @@
 """
 test_game.py
 
-Pytest tests for the updated BlackjackGame environment.
-
-Covers:
-- reset/state fields
-- hit/stand/double/split behavior
-- dealer soft-17 behavior
-- natural blackjack payout
-- immediate dealer blackjack resolution
-- per-hand final rewards after splitting
-
-Run from the project root with:
-    pytest tests/test_game.py -q
-
-Assumes your project files are named:
-    cards.py
-    config.py
-    game.py
+Pytest tests for the BlackjackGame environment.
 """
 
 import pytest
@@ -31,8 +15,8 @@ class FixedDeck(Deck):
     """
     Deterministic deck for testing.
 
-    Cards are drawn from left to right. reset() is intentionally a no-op so a
-    test can call game.reset() without rewinding the fixed card sequence.
+    Cards are drawn from left to right.
+    reset() is intentionally a no-op.
     """
 
     def __init__(self, cards):
@@ -50,6 +34,25 @@ class FixedDeck(Deck):
     def reset(self):
         pass
 
+    def cards_remaining(self):
+        return len(self.cards) - self.index
+
+    def get_count_vector(self):
+        remaining_cards = self.cards[self.index:]
+        counts = [0] * 10
+
+        for card in remaining_cards:
+            if card == 1:
+                counts[0] += 1
+            elif 2 <= card <= 9:
+                counts[card - 1] += 1
+            elif card == 10:
+                counts[9] += 1
+            else:
+                raise ValueError(f"Invalid card value: {card}")
+
+        return tuple(counts)
+
 
 # =========================
 # Reset / GameState
@@ -57,7 +60,6 @@ class FixedDeck(Deck):
 
 
 def test_reset_creates_initial_state_with_q_learning_context():
-    # Player: 10,7. Dealer: 9,6.
     deck = FixedDeck([10, 7, 9, 6])
     game = BlackjackGame(deck)
 
@@ -79,9 +81,10 @@ def test_reset_creates_initial_state_with_q_learning_context():
     assert state.is_split_hand is False
     assert state.active_hand_index == 0
     assert state.num_hands == 1
+    assert state.count_vector == (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
 
-def test_state_as_tuple_includes_split_context():
+def test_state_as_tuple_includes_split_context_and_count_vector():
     state = GameState(
         player_value=16,
         dealer_upcard=10,
@@ -91,9 +94,45 @@ def test_state_as_tuple_includes_split_context():
         is_split_hand=True,
         active_hand_index=1,
         num_hands=3,
+        count_vector=(4, 4, 4, 4, 4, 4, 4, 4, 4, 16),
     )
 
-    assert state.as_tuple() == (16, 10, False, True, False, True, 1, 3)
+    assert state.as_tuple() == (
+        16,
+        10,
+        False,
+        True,
+        False,
+        True,
+        1,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        16,
+    )
+
+
+def test_game_state_has_default_count_vector_for_old_tests():
+    state = GameState(
+        player_value=16,
+        dealer_upcard=10,
+        usable_ace=False,
+        can_double=True,
+        can_split=False,
+        is_split_hand=False,
+        active_hand_index=0,
+        num_hands=1,
+    )
+
+    assert state.count_vector == (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    assert len(state.as_tuple()) == 18
 
 
 def test_get_state_after_round_done_raises_error():
@@ -107,12 +146,141 @@ def test_get_state_after_round_done_raises_error():
 
 
 # =========================
+# Count vector behavior
+# =========================
+
+
+def test_reset_state_includes_remaining_count_vector():
+    deck = FixedDeck([10, 7, 9, 6, 5, 4, 3])
+    game = BlackjackGame(deck)
+
+    state = game.reset()
+
+    assert state.count_vector == (
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_hit_updates_count_vector():
+    deck = FixedDeck([10, 2, 9, 7, 5, 4, 3])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    next_state, reward, done = game.step(Action.HIT)
+
+    assert done is False
+    assert reward == 0
+    assert next_state.count_vector == (
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_split_updates_count_vector_after_dealing_to_split_hands():
+    deck = FixedDeck([8, 8, 10, 6, 3, 4, 5, 2])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    next_state, reward, done = game.step(Action.SPLIT)
+
+    assert done is False
+    assert reward == 0
+    assert [hand.cards for hand in game.player_hands] == [[8, 3], [8, 4]]
+    assert next_state.count_vector == (
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_double_consumes_one_card_and_terminal_state_has_no_next_state():
+    deck = FixedDeck([9, 2, 10, 7, 5, 4, 3])
+    game = BlackjackGame(deck)
+    game.reset()
+
+    next_state, reward, done = game.step(Action.DOUBLE)
+
+    assert next_state is None
+    assert done is True
+    assert game.player_hand.cards == [9, 2, 5]
+    assert game.deck.get_count_vector() == (
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_game_reset_does_not_reshuffle_finite_deck_when_above_threshold():
+    deck = Deck(shuffle=False, reshuffle_threshold=15)
+    game = BlackjackGame(deck)
+
+    state_1 = game.reset()
+    cards_after_first_reset = deck.cards_remaining()
+
+    game.step(Action.STAND)
+
+    state_2 = game.reset()
+    cards_after_second_reset = deck.cards_remaining()
+
+    assert state_1 is not None
+    assert state_2 is not None
+    assert cards_after_second_reset < cards_after_first_reset
+    assert cards_after_second_reset != 52
+
+
+def test_game_reset_reshuffles_finite_deck_when_below_threshold():
+    deck = Deck(shuffle=False, reshuffle_threshold=49)
+    game = BlackjackGame(deck)
+
+    game.reset()
+    assert deck.cards_remaining() == 48
+
+    game.step(Action.STAND)
+
+    game.reset()
+
+    # At the start of second reset, the shoe is below 49, so it force-resets
+    # to 52, then deals 4 cards.
+    assert deck.cards_remaining() == 48
+
+
+# =========================
 # Immediate dealer blackjack
 # =========================
 
 
 def test_dealer_blackjack_ends_round_immediately_before_player_acts():
-    # Player: 10,9 = 19. Dealer: A,10 = blackjack.
     deck = FixedDeck([10, 9, 1, 10])
     game = BlackjackGame(deck)
 
@@ -131,7 +299,6 @@ def test_dealer_blackjack_ends_round_immediately_before_player_acts():
 
 
 def test_dealer_and_player_blackjack_immediate_push():
-    # Player: A,10 = blackjack. Dealer: A,10 = blackjack.
     deck = FixedDeck([1, 10, 1, 10])
     game = BlackjackGame(deck)
 
@@ -149,7 +316,6 @@ def test_dealer_and_player_blackjack_immediate_push():
 
 
 def test_hit_adds_card_and_continues_when_not_bust():
-    # Player: 10,2 hits 5 -> 17. Dealer: 9,7.
     deck = FixedDeck([10, 2, 9, 7, 5])
     game = BlackjackGame(deck)
     game.reset()
@@ -165,7 +331,6 @@ def test_hit_adds_card_and_continues_when_not_bust():
 
 
 def test_hit_bust_assigns_that_hand_reward_immediately():
-    # Player: 10,9 hits 5 -> bust. Dealer should not draw.
     deck = FixedDeck([10, 9, 8, 7, 5])
     game = BlackjackGame(deck)
     game.reset()
@@ -181,7 +346,6 @@ def test_hit_bust_assigns_that_hand_reward_immediately():
 
 
 def test_stand_dealer_draws_until_17_or_more():
-    # Player: 18. Dealer: 9,2 draws 5 then 3 -> 19.
     deck = FixedDeck([10, 8, 9, 2, 5, 3])
     game = BlackjackGame(deck)
     game.reset()
@@ -197,7 +361,6 @@ def test_stand_dealer_draws_until_17_or_more():
 
 
 def test_dealer_stands_on_soft_17():
-    # Dealer A,6 is soft 17 and should not draw.
     deck = FixedDeck([10, 8, 1, 6])
     game = BlackjackGame(deck)
     game.reset()
@@ -215,7 +378,6 @@ def test_dealer_stands_on_soft_17():
 
 
 def test_player_natural_blackjack_allows_only_stand():
-    # Player blackjack. Dealer 9,7.
     deck = FixedDeck([1, 10, 9, 7])
     game = BlackjackGame(deck)
 
@@ -249,22 +411,22 @@ def test_player_natural_blackjack_pays_three_to_two():
     assert reward == BLACKJACK_PAYOUT
     assert game.hand_rewards == [BLACKJACK_PAYOUT]
     assert game.round_reward == BLACKJACK_PAYOUT
-    # Dealer should not draw because player natural blackjack already has known result.
     assert game.dealer_hand.cards == [9, 7]
 
 
 def test_non_natural_21_pays_normal_win_not_blackjack_payout():
-    # Player 10,6 hits 5 -> 21, then stands vs dealer 17.
     deck = FixedDeck([10, 6, 10, 7, 5])
     game = BlackjackGame(deck)
     game.reset()
 
     next_state, reward, done = game.step(Action.HIT)
+
     assert next_state.player_value == 21
     assert reward == 0
     assert done is False
 
     next_state, reward, done = game.step(Action.STAND)
+
     assert next_state is None
     assert done is True
     assert reward == REWARD_WIN
@@ -278,7 +440,6 @@ def test_non_natural_21_pays_normal_win_not_blackjack_payout():
 
 
 def test_double_draws_one_card_finishes_hand_and_doubles_win_reward():
-    # Player 9,2 doubles, draws 10 -> 21. Dealer 10,7 = 17.
     deck = FixedDeck([9, 2, 10, 7, 10])
     game = BlackjackGame(deck)
     game.reset()
@@ -315,7 +476,6 @@ def test_double_is_not_available_after_hit():
 
 
 def test_split_creates_two_hands_and_updates_state_context():
-    # Player 8,8 split into [8,3], [8,4]. Dealer 10,6.
     deck = FixedDeck([8, 8, 10, 6, 3, 4])
     game = BlackjackGame(deck)
     game.reset()
@@ -356,8 +516,6 @@ def test_stand_after_split_moves_to_next_hand_without_scoring_yet():
 
 
 def test_split_final_reward_is_stored_per_hand_and_round_reward_is_sum():
-    # Player split 8,8 into [8,10] and [8,9]. Dealer 10,6 draws 10 and busts.
-    # Both hands win: per-hand rewards [1, 1], round reward 2.
     deck = FixedDeck([8, 8, 10, 6, 10, 9, 10])
     game = BlackjackGame(deck)
     game.reset()
@@ -374,7 +532,6 @@ def test_split_final_reward_is_stored_per_hand_and_round_reward_is_sum():
 
 
 def test_busted_split_hand_gets_own_loss_before_round_ends():
-    # Split 10,10 into [10,2] and [10,3]. First hand hits 10 and busts.
     deck = FixedDeck([10, 10, 9, 8, 2, 3, 10])
     game = BlackjackGame(deck)
     game.reset()
@@ -392,10 +549,6 @@ def test_busted_split_hand_gets_own_loss_before_round_ends():
 
 
 def test_double_after_split_uses_only_that_hand_bet_in_final_hand_rewards():
-    # Split 8,8 into [8,3] and [8,2].
-    # First hand doubles and draws 10 -> 21, bet 2, wins +2 vs dealer 17.
-    # Second hand stands on 10 and loses -1 vs dealer 17.
-    # Per-hand rewards [2, -1], round reward +1.
     deck = FixedDeck([8, 8, 10, 7, 3, 2, 10])
     game = BlackjackGame(deck)
     game.reset()
@@ -404,6 +557,7 @@ def test_double_after_split_uses_only_that_hand_bet_in_final_hand_rewards():
     assert Action.DOUBLE in game.available_actions()
 
     next_state, reward, done = game.step(Action.DOUBLE)
+
     assert game.hand_bets == [2, 1]
     assert game.hand_rewards == [None, None]
     assert game.active_hand_index == 1
@@ -411,6 +565,7 @@ def test_double_after_split_uses_only_that_hand_bet_in_final_hand_rewards():
     assert done is False
 
     next_state, reward, done = game.step(Action.STAND)
+
     assert next_state is None
     assert done is True
     assert game.hand_rewards == [2 * REWARD_WIN, REWARD_LOSS]
@@ -419,8 +574,6 @@ def test_double_after_split_uses_only_that_hand_bet_in_final_hand_rewards():
 
 
 def test_split_ace_ten_is_not_natural_blackjack_payout():
-    # Split aces into [A,10] and [A,9]. Both are forced to stand.
-    # [A,10] after split is normal 21, not natural blackjack.
     deck = FixedDeck([1, 1, 10, 7, 10, 9])
     game = BlackjackGame(deck)
     game.reset()
