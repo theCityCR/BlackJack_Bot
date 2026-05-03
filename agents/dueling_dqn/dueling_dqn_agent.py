@@ -1,6 +1,7 @@
 import random
 from collections import deque
 from dataclasses import dataclass
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,7 @@ ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
 ACTION_TO_INDEX = {action: index for index, action in enumerate(ACTION_LIST)}
 
 INITIAL_SHOE_SIZE = 52 * NUM_DECKS
+REWARD_SCALE = 2.0
 
 
 @dataclass
@@ -21,7 +23,7 @@ class Transition:
     state: torch.Tensor
     action_index: int
     reward: float
-    next_state: torch.Tensor | None
+    next_state: Optional[torch.Tensor]
     done: bool
     next_legal_action_indices: list[int]
 
@@ -31,25 +33,25 @@ class DuelingDQN(nn.Module):
         super().__init__()
 
         self.feature_layer = nn.Sequential(
-            nn.Linear(input_size, 128),
+            nn.Linear(input_size, 256),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
             nn.ReLU(),
         )
 
         self.value_stream = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(128, 1),
         )
 
         self.advantage_stream = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(64, output_size),
+            nn.Linear(128, output_size),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         features = self.feature_layer(x)
 
         value = self.value_stream(features)
@@ -61,16 +63,17 @@ class DuelingDQN(nn.Module):
 class DuelingDQNAgent:
     def __init__(
         self,
-        learning_rate=0.0005,
-        discount_factor=1.0,
-        epsilon=1.0,
-        epsilon_min=0.05,
-        epsilon_decay=0.99995,
-        replay_size=100_000,
-        batch_size=128,
-        target_update_interval=5_000,
-        min_replay_size=1_000,
-        train_updates_per_episode=2,
+        learning_rate: float = 0.0005,
+        discount_factor: float = 1.0,
+        epsilon: float = 1.0,
+        epsilon_min: float = 0.05,
+        epsilon_decay: float = 0.9999,
+        replay_size: int = 100_000,
+        batch_size: int = 256,
+        target_update_interval: int = 2_000,
+        min_replay_size: int = 5_000,
+        train_updates_per_episode: int = 1,
+        device: Optional[str] = None,
     ):
         self.discount_factor = discount_factor
 
@@ -86,8 +89,16 @@ class DuelingDQNAgent:
         self.input_size = 19
         self.output_size = len(ACTION_LIST)
 
-        self.model = DuelingDQN(self.input_size, self.output_size)
-        self.target_model = DuelingDQN(self.input_size, self.output_size)
+        if device is None:
+            self.device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
+        else:
+            self.device = torch.device(device)
+
+        self.model = DuelingDQN(self.input_size, self.output_size).to(self.device)
+        self.target_model = DuelingDQN(self.input_size, self.output_size).to(self.device)
+
         self.target_model.load_state_dict(self.model.state_dict())
         self.target_model.eval()
 
@@ -141,13 +152,10 @@ class DuelingDQNAgent:
         legal_indices = self.legal_action_indices(available_actions)
 
         with torch.no_grad():
-            state_tensor = self.encode_state(state).unsqueeze(0)
+            state_tensor = self.encode_state(state).unsqueeze(0).to(self.device)
             q_values = self.model(state_tensor)[0]
-
-            masked_q_values = torch.full_like(q_values, float("-inf"))
-            masked_q_values[legal_indices] = q_values[legal_indices]
-
-            action_index = torch.argmax(masked_q_values).item()
+            masked_q_values = self._mask_illegal_actions(q_values, legal_indices)
+            action_index = masked_q_values.argmax().item()
 
         return ACTION_LIST[action_index]
 
@@ -156,7 +164,7 @@ class DuelingDQNAgent:
         state: GameState,
         action: Action,
         reward: float,
-        next_state: GameState | None,
+        next_state: Optional[GameState],
         done: bool,
         next_available_actions,
     ):
@@ -166,11 +174,13 @@ class DuelingDQNAgent:
             else self.legal_action_indices(next_available_actions)
         )
 
+        scaled_reward = reward / REWARD_SCALE
+
         self.replay_buffer.append(
             Transition(
                 state=self.encode_state(state),
                 action_index=ACTION_TO_INDEX[action],
-                reward=reward,
+                reward=scaled_reward,
                 next_state=None if next_state is None else self.encode_state(next_state),
                 done=done,
                 next_legal_action_indices=next_legal_action_indices,
@@ -183,17 +193,22 @@ class DuelingDQNAgent:
 
         batch = random.sample(self.replay_buffer, self.batch_size)
 
-        states = torch.stack([t.state for t in batch])
+        states = torch.stack([transition.state for transition in batch]).to(self.device)
+
         action_indices = torch.tensor(
-            [t.action_index for t in batch],
+            [transition.action_index for transition in batch],
             dtype=torch.long,
+            device=self.device,
         )
+
         rewards = torch.tensor(
-            [t.reward for t in batch],
+            [transition.reward for transition in batch],
             dtype=torch.float32,
+            device=self.device,
         )
 
         current_q_values = self.model(states)
+
         current_q = current_q_values.gather(
             1,
             action_indices.unsqueeze(1),
@@ -202,7 +217,8 @@ class DuelingDQNAgent:
         targets = rewards.clone()
 
         non_done_indices = [
-            index for index, transition in enumerate(batch)
+            index
+            for index, transition in enumerate(batch)
             if not transition.done
         ]
 
@@ -210,7 +226,7 @@ class DuelingDQNAgent:
             next_states = torch.stack([
                 batch[index].next_state
                 for index in non_done_indices
-            ])
+            ]).to(self.device)
 
             with torch.no_grad():
                 next_q_main = self.model(next_states)
@@ -222,19 +238,24 @@ class DuelingDQNAgent:
 
                 for row, batch_index in enumerate(non_done_indices):
                     legal_indices = batch[batch_index].next_legal_action_indices
-                    masked_next_q_main[row, legal_indices] = (
-                        next_q_main[row, legal_indices]
-                    )
+                    masked_next_q_main[row, legal_indices] = next_q_main[row, legal_indices]
 
                 best_next_action_indices = masked_next_q_main.argmax(dim=1)
 
                 next_q_target = self.target_model(next_states)
+
                 next_q = next_q_target.gather(
                     1,
                     best_next_action_indices.unsqueeze(1),
                 ).squeeze(1)
 
-            targets[non_done_indices] += self.discount_factor * next_q
+            non_done_tensor = torch.tensor(
+                non_done_indices,
+                dtype=torch.long,
+                device=self.device,
+            )
+
+            targets[non_done_tensor] += self.discount_factor * next_q
 
         loss = self.loss_fn(current_q, targets)
 
@@ -246,7 +267,10 @@ class DuelingDQNAgent:
         self.training_steps += 1
 
         if self.training_steps % self.target_update_interval == 0:
-            self.target_model.load_state_dict(self.model.state_dict())
+            self.update_target_model()
+
+    def update_target_model(self):
+        self.target_model.load_state_dict(self.model.state_dict())
 
     def decay_epsilon(self):
         self.epsilon = max(
@@ -290,13 +314,15 @@ class DuelingDQNAgent:
             hand_reward = hand_rewards[hand_index]
 
             is_last_transition = index == len(transitions) - 1
+
             next_transition_is_new_hand = (
                 not is_last_transition
                 and transitions[index + 1]["hand_index"] != hand_index
             )
 
             terminal_for_this_hand = (
-                is_last_transition or next_transition_is_new_hand
+                is_last_transition
+                or next_transition_is_new_hand
             )
 
             if terminal_for_this_hand:
@@ -353,3 +379,12 @@ class DuelingDQNAgent:
             state = next_state
 
         return reward
+
+    def _mask_illegal_actions(
+        self,
+        q_values: torch.Tensor,
+        legal_indices: list[int],
+    ) -> torch.Tensor:
+        masked_q_values = torch.full_like(q_values, float("-inf"))
+        masked_q_values[legal_indices] = q_values[legal_indices]
+        return masked_q_values

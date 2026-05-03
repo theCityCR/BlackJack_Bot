@@ -305,7 +305,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777827999146</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="-">
+      <option name="closed" value="true" />
+      <created>1777828449308</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1777828449308</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -322,7 +330,7 @@
     <SUITE FILE_PATH="coverage/BlackJack_Simple$main.coverage" NAME="main Coverage Results" MODIFIED="1777602543176" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_double_q_network_learning_agent_2.coverage" NAME="train_double_q_network_learning_agent_2 Coverage Results" MODIFIED="1777783341131" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/agents/double_q_network_learning" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_1.coverage" NAME="train_q_learning_1 Coverage Results" MODIFIED="1777680224180" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />
-    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_dueling_dqn_agent.coverage" NAME="train_dueling_dqn_agent Coverage Results" MODIFIED="1777828023663" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/agents/dueling_dqn" />
+    <SUITE FILE_PATH="coverage/BlackJack_Simple$train_dueling_dqn_agent.coverage" NAME="train_dueling_dqn_agent Coverage Results" MODIFIED="1777829173055" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/agents/dueling_dqn" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$run_rule_agent.coverage" NAME="run_rule_agent Coverage Results" MODIFIED="1777784033688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/agents/rule_agent" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$game.coverage" NAME="game Coverage Results" MODIFIED="1777654111581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/BlackJack_Simple$train_q_learning_4.coverage" NAME="train_q_learning_4 Coverage Results" MODIFIED="1777682834836" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training" />

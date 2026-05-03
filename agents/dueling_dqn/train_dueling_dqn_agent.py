@@ -82,12 +82,12 @@ def train():
         discount_factor=1.0,
         epsilon=1.0,
         epsilon_min=0.05,
-        epsilon_decay=0.99995,
+        epsilon_decay=0.9999,
         replay_size=100_000,
-        batch_size=128,
-        target_update_interval=5_000,
-        min_replay_size=1_000,
-        train_updates_per_episode=2,
+        batch_size=256,
+        target_update_interval=2_000,
+        min_replay_size=5_000,
+        train_updates_per_episode=1,
     )
 
     interval_reward = 0.0
