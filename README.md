@@ -152,7 +152,7 @@ The prioritized replay buffer samples important transitions more frequently usin
 
 ---
 
-# Example Project Structure
+# Project Structure
 
 ```text id="69my8v"
 project/
