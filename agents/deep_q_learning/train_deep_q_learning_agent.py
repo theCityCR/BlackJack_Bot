@@ -1,4 +1,4 @@
-from agents.deprecated.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
+from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
 from game import BlackjackGame
 
 

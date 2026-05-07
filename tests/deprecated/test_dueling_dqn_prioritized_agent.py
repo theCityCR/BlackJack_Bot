@@ -1,6 +1,6 @@
 import torch
 
-from agents.deprecated.prioritized_replay.dueling_dqn_prioritized_agent import (
+from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
     ACTION_TO_INDEX,
     DuelingDQNAgent,
     PrioritizedReplayBuffer,

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from agents.deprecated.double_q_network_learning.double_q_network_learning_agent import (
+from agents.double_q_network_learning.double_q_network_learning_agent import (
     ACTION_LIST,
     ACTION_TO_INDEX,
     DoubleQNetworkLearningAgent,

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from agents.deprecated.dueling_dqn.dueling_dqn_agent import (
+from agents.dueling_dqn.dueling_dqn_agent import (
     ACTION_LIST,
     ACTION_TO_INDEX,
     DuelingDQN,
