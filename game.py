@@ -8,6 +8,9 @@ Supported player actions:
 - Stand
 - Double
 - Split
+
+The deck is a random 26-card shoe by default.
+The agent receives the remaining-card count vector through GameState.
 """
 
 from dataclasses import dataclass
@@ -43,8 +46,13 @@ class GameState:
     """
     Public game state given to an agent.
 
-    count_vector stores remaining deck counts in this order:
+    count_vector stores remaining card counts in this order:
+
     [A, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    Since the deck is a finite 26-card random shoe during each round,
+    this count vector gives the agent information about the exact remaining
+    composition of the shoe.
     """
 
     player_value: int
@@ -143,6 +151,12 @@ class BlackjackGame:
         return self.get_state()
 
     def reset_with_cards(self, player_cards, dealer_cards) -> Optional[GameState]:
+        """
+        Testing helper.
+
+        This creates fixed player/dealer hands without removing those cards
+        from the deck. Use this only for controlled tests, not normal training.
+        """
         self.deck.reset()
 
         self.hand_states = [
@@ -253,6 +267,7 @@ class BlackjackGame:
             print(f"Round reward: {self.round_reward}")
         else:
             print(f"Dealer upcard: {self.dealer_hand.cards[0]}")
+            print(f"Cards remaining: {self.deck.cards_remaining()}")
             print(f"Count vector: {self.deck.get_count_vector()}")
 
     def current_hand_state(self) -> PlayerHandState:

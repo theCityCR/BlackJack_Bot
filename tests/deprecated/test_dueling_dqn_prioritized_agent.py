@@ -1,8 +1,6 @@
-import pytest
 import torch
 
-from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    ACTION_LIST,
+from agents.deprecated.prioritized_replay.dueling_dqn_prioritized_agent import (
     ACTION_TO_INDEX,
     DuelingDQNAgent,
     PrioritizedReplayBuffer,
