@@ -9,7 +9,7 @@ Supported player actions:
 - Double
 - Split
 
-The deck is a random 26-card shoe by default.
+The deck is a persistent, finite multi-deck shoe by default.
 The agent receives the remaining-card count vector through GameState.
 """
 
@@ -50,9 +50,8 @@ class GameState:
 
     [A, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-    Since the deck is a finite 26-card random shoe during each round,
-    this count vector gives the agent information about the exact remaining
-    composition of the shoe.
+    The count vector gives the agent information about the exact remaining
+    composition of the finite shoe.
     """
 
     player_value: int

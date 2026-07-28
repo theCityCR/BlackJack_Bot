@@ -4,17 +4,16 @@ cards.py
 Card, Deck, and Hand abstractions for Blackjack.
 
 Deck behavior:
-- At the start of each round, generate a fresh random shoe of 26 cards.
-- Each card is sampled from the standard blackjack deck distribution.
-- The game knows the full 26-card shoe through Deck.cards.
+- Build a standard finite shoe from one or more decks.
+- Keep using that shoe between rounds until it reaches a cut-card threshold.
+- The game knows the remaining shoe through Deck.cards.
 - The agent receives the remaining card counts through get_count_vector().
 """
 
 import random
 from typing import Iterable, List, Tuple
 
-
-RANDOM_SHOE_SIZE = 26
+from config import NUM_DECKS, RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
 
 SINGLE_DECK_CARDS = (
     [1] * 4 +
@@ -32,40 +31,39 @@ SINGLE_DECK_CARDS = (
 
 class Deck:
     """
-    Random 26-card blackjack shoe.
+    Finite blackjack shoe made from standard 52-card decks.
 
     Ace is represented as 1.
     10, J, Q, and K are all represented as 10.
 
-    Important:
-    This is not a real half-deck.
-    Each of the 26 cards is sampled independently from the standard blackjack
-    deck distribution.
-
-    This means:
-    - The shoe is finite during the round.
-    - The agent can use the remaining-card count vector.
-    - A new random 26-card shoe is generated every round.
+    The shoe persists across rounds and is rebuilt when no more than
+    ``reshuffle_threshold`` cards remain. This preserves real card frequencies
+    and makes the count vector useful across consecutive rounds.
     """
 
-    def __init__(self, num_cards: int = RANDOM_SHOE_SIZE, shuffle: bool = True):
-        if num_cards <= 0:
-            raise ValueError("num_cards must be positive")
+    def __init__(
+        self,
+        num_decks: int = NUM_DECKS,
+        shuffle: bool = True,
+        reshuffle_threshold: int = RESHUFFLE_WHEN_CARDS_REMAINING_BELOW,
+    ):
+        if num_decks <= 0:
+            raise ValueError("num_decks must be positive")
+        if not 0 <= reshuffle_threshold <= 52 * num_decks:
+            raise ValueError("reshuffle_threshold must be within the shoe size")
 
-        self.num_cards = num_cards
+        self.num_decks = num_decks
         self.shuffle = shuffle
+        self.reshuffle_threshold = reshuffle_threshold
         self.cards: List[int] = []
 
         self.force_reset()
 
     def force_reset(self):
         """
-        Generate a new random shoe.
+        Build a complete new shoe.
         """
-        self.cards = [
-            random.choice(SINGLE_DECK_CARDS)
-            for _ in range(self.num_cards)
-        ]
+        self.cards = list(SINGLE_DECK_CARDS) * self.num_decks
 
         if self.shuffle:
             random.shuffle(self.cards)
@@ -74,9 +72,10 @@ class Deck:
         """
         Prepare the deck for a new round.
 
-        For this deck type, every round gets a fresh random 26-card shoe.
+        Keep the current shoe unless it has passed the cut card.
         """
-        self.force_reset()
+        if self.cards_remaining() <= self.reshuffle_threshold:
+            self.force_reset()
 
     def draw_card(self) -> int:
         """
@@ -126,7 +125,7 @@ class Deck:
 
     def __repr__(self):
         return (
-            f"Deck(num_cards={self.num_cards}, "
+            f"Deck(num_decks={self.num_decks}, "
             f"cards_remaining={self.cards_remaining()})"
         )
 

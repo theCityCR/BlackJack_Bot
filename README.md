@@ -20,7 +20,7 @@ The main focus of the project was understanding how environment design, state re
 
 Most beginner Blackjack RL projects use an infinite deck and only allow hit/stand actions. This project instead models a much more realistic environment:
 
-* Finite randomized shoe
+* Persistent finite multi-deck shoe
 * Multiple player hands after splits
 * Double-down decisions
 * Natural blackjack payouts
@@ -49,11 +49,9 @@ The game engine exposes a structured public `GameState` object to agents for tra
 
 ---
 
-## Finite Randomized Shoe
+## Finite Multi-Deck Shoe
 
-Instead of using an infinite deck, each round generates a fresh randomized 26-card shoe.
-
-Each card is sampled from a real Blackjack card distribution, allowing agents to use remaining-card information during training. This introduces deck-composition effects and lightweight card-counting behavior into the learning process. 
+Instead of using an infinite deck, the environment deals from a configurable shoe built from complete 52-card decks. The shoe persists between rounds and reshuffles only after it passes a configurable cut-card threshold. This preserves real card frequencies and makes remaining-card information meaningful during training.
 
 Agents receive a remaining-card count vector in the format:
 
@@ -173,6 +171,20 @@ project/
 ├── game.py
 ├── config.py
 └── README.md
+```
+
+## Quick Start
+
+Run the rule-based benchmark with a reproducible seed:
+
+```bash
+python3 main.py --episodes 1000 --seed 42
+```
+
+Run the test suite (after installing `pytest`):
+
+```bash
+python3 -m pytest -q
 ```
 
 ---
