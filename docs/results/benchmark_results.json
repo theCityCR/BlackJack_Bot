@@ -1,0 +1,41 @@
+{
+  "seed": 42,
+  "results": [
+    {
+      "agent": "Rule-based baseline",
+      "episodes": 25000,
+      "average_reward": -0.01034,
+      "win_rate": 0.43108,
+      "loss_rate": 0.48132,
+      "draw_rate": 0.0876,
+      "training_steps": null
+    },
+    {
+      "agent": "Double DQN",
+      "episodes": 25000,
+      "average_reward": -0.05944,
+      "win_rate": 0.42,
+      "loss_rate": 0.4952,
+      "draw_rate": 0.0848,
+      "training_steps": 379264
+    },
+    {
+      "agent": "Dueling DQN",
+      "episodes": 25000,
+      "average_reward": -0.11086,
+      "win_rate": 0.40668,
+      "loss_rate": 0.51332,
+      "draw_rate": 0.08,
+      "training_steps": 182484
+    },
+    {
+      "agent": "Dueling Double DQN + PER",
+      "episodes": 25000,
+      "average_reward": -0.0883,
+      "win_rate": 0.41444,
+      "loss_rate": 0.5056,
+      "draw_rate": 0.07996,
+      "training_steps": 91270
+    }
+  ]
+}

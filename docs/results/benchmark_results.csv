@@ -1,0 +1,5 @@
+agent,episodes,average_reward,win_rate,loss_rate,draw_rate,training_steps
+Rule-based baseline,25000,-0.01034,0.43108,0.48132,0.0876,
+Double DQN,25000,-0.05944,0.42,0.4952,0.0848,379264
+Dueling DQN,25000,-0.11086,0.40668,0.51332,0.08,182484
+Dueling Double DQN + PER,25000,-0.0883,0.41444,0.5056,0.07996,91270

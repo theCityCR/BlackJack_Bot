@@ -2,10 +2,11 @@
 .idea/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .venv/
 venv/
 
 # Generated training artifacts
 agents/**/results/
-results/
+/results/
