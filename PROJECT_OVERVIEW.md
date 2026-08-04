@@ -23,7 +23,9 @@ The game engine manages the deck, player hands, dealer behavior, legal actions, 
 - Split-hand context
 - The number of each card value remaining in the shoe
 
-The agent then chooses one of four actions: **hit**, **stand**, **double**, or **split**. At the end of the round, it receives a positive, negative, or neutral reward based on the result and the amount wagered.
+Neural agents encode that state into a shared 19-feature vector. The agent then chooses one of four actions: **hit**, **stand**, **double**, or **split**. At the end of the round, it receives a positive, negative, or neutral reward based on the result and the amount wagered.
+
+Default rules: 2 decks, reshuffle below 26 cards, dealer stands on all 17s (S17), DAS and re-splits allowed, no hitting split aces.
 
 ## AI Approaches
 
@@ -33,7 +35,7 @@ The repository explores several strategies:
 - **Q-learning:** A tabular agent that learns action values through repeated play.
 - **Deep Q-Network (DQN):** Uses a neural network and experience replay to handle a larger state space.
 - **Double DQN:** Reduces the tendency of standard DQN models to overestimate action values.
-- **Dueling DQN:** Separately estimates the value of a state and the advantage of each action.
+- **Dueling Double DQN:** Separately estimates state value and action advantage, with Double DQN targets.
 - **Prioritized experience replay:** Trains more frequently on transitions from which the agent has the most to learn.
 
 ## Technical Highlights
@@ -43,9 +45,12 @@ The repository explores several strategies:
 - Exact remaining-card count vector for card-aware decision-making
 - Support for splits, re-splits, double-down decisions, and split-hand rewards
 - Legal-action masking to prevent agents from selecting invalid moves
+- Shared neural state encoding and training helpers in `agents/common.py`
 - PyTorch neural networks, replay buffers, and target-network synchronization
 - Deterministic evaluation through configurable random seeds
+- Seeded training entrypoints with checkpoints under `agents/*/results/`
 - Automated test suite covering game rules, deck behavior, and agent decisions
+- Packaged with `pyproject.toml` and GitHub Actions CI on Python 3.10/3.11
 
 ## What Makes It Interesting
 
@@ -57,7 +62,7 @@ The project also provides a clear comparison between human-designed heuristics a
 
 The core game environment and rule-based benchmark are fully functional. The repository contains implementations of the major reinforcement learning agents, reproducible evaluation tooling, versioned benchmark results, and an automated test suite. Trained checkpoints are kept outside version control because of their size. The environment currently models a two-deck shoe by default and reshuffles only after reaching a configurable cut-card threshold.
 
-The saved neural checkpoints were evaluated alongside the rule-based baseline over 25,000 seeded rounds per agent. The rule baseline achieved the strongest average reward. Rather than hiding this negative result, the project documents it as evidence that a more complex architecture does not automatically overcome a large state space or imperfect state and reward design. Full results are available in [`docs/results`](docs/results).
+The saved neural checkpoints were evaluated alongside the rule-based baseline over 25,000 seeded rounds per agent. The rule baseline achieved the strongest average reward. Rather than hiding this negative result, the project documents it as evidence that a more complex architecture does not automatically overcome a large state space or imperfect state and reward design. Training step counts also differ across agents, so compute is part of the comparison. Full results are available in [`docs/results`](docs/results).
 
 ## Project by the Numbers
 
@@ -76,7 +81,7 @@ The project ultimately implemented **five RL variants**:
 1. Tabular Q-learning
 2. Deep Q-Network (DQN)
 3. Double DQN
-4. Dueling DQN
+4. Dueling Double DQN
 5. Dueling Double DQN with prioritized experience replay
 
 The rule-based strategy agent is an additional benchmark, but it is not counted as a reinforcement learning algorithm.
@@ -90,12 +95,12 @@ The environment and state representation went through approximately **four major
 Possible next steps include:
 
 - A web interface where users can play against or observe trained agents
-- Charts comparing reward, win rate, and learning stability across algorithms
 - Betting and bankroll-management strategies
 - PPO or actor-critic agents
 - More configurable casino rules and shoe penetration
 - Explainable decisions showing why an agent selected a particular action
-- Automated experiment tracking and model comparison
+- Automated experiment tracking and learning-curve comparison
+- Closing the performance gap with the rule baseline through state/reward redesign
 
 ## Technology Stack
 

@@ -12,7 +12,6 @@ build/
 htmlcov/
 .mypy_cache/
 
-# Generated training / evaluation artifacts
+# Generated training / evaluation artifacts (not published docs/results)
 agents/**/results/
 /results/
-results/

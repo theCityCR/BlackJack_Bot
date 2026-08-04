@@ -4,7 +4,7 @@ from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent, ACT
 from game import Action, BlackjackGame, GameState
 
 
-def test_encode_state_returns_tensor_of_size_8():
+def test_encode_state_returns_tensor_of_size_19():
     agent = DeepQLearningAgent()
 
     state = GameState(
@@ -21,7 +21,7 @@ def test_encode_state_returns_tensor_of_size_8():
     encoded = agent.encode_state(state)
 
     assert isinstance(encoded, torch.Tensor)
-    assert encoded.shape == (8,)
+    assert encoded.shape == (19,)
     assert encoded.dtype == torch.float32
 
 

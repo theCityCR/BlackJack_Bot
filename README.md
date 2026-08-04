@@ -9,25 +9,38 @@ The project implements five RL variants—from tabular Q-learning through Duelin
 - **Five RL variants** implemented directly in Python and PyTorch
 - **550,000+ configured training episodes** across the core experiments
 - **Persistent multi-deck shoe** with exact remaining-card composition
-- **194+ automated tests** for game rules, state transitions, and agent behavior
+- **Shared 19-feature state encoding** for all neural agents (shoe-aware)
+- **200 automated tests** for game rules, state transitions, and agent behavior
 - **Reproducible evaluation** with seeded runs and machine-readable output
 
 ## Results
 
-The available trained checkpoints and rule baseline were evaluated for 25,000 rounds each using seed 42 and the same game configuration.
+The available trained checkpoints and rule baseline were evaluated for 25,000 rounds each using seed 42 and the same game configuration. Win/loss/draw rates use the sign of the **net round reward** (so doubles and splits collapse to one outcome per round).
 
-| Agent | Average reward | Win rate | Loss rate | Draw rate |
-|---|---:|---:|---:|---:|
-| Rule-based baseline | **-0.0103** | **43.11%** | **48.13%** | 8.76% |
-| Double DQN | -0.0594 | 42.00% | 49.52% | 8.48% |
-| Dueling Double DQN + PER | -0.0883 | 41.44% | 50.56% | 8.00% |
-| Dueling DQN | -0.1109 | 40.67% | 51.33% | 8.00% |
+| Agent | Avg reward | Win rate | Loss rate | Draw rate | Training steps |
+|---|---:|---:|---:|---:|---:|
+| Rule-based baseline | **-0.0103** | **43.11%** | **48.13%** | 8.76% | — |
+| Double DQN | -0.0594 | 42.00% | 49.52% | 8.48% | 379,264 |
+| Dueling Double DQN + PER | -0.0883 | 41.44% | 50.56% | 8.00% | 91,270 |
+| Dueling Double DQN | -0.1109 | 40.67% | 51.33% | 8.00% | 182,484 |
 
 ![Average reward comparison](docs/results/benchmark_results.svg)
 
-The rule-based agent outperformed the saved neural checkpoints. This is a useful negative result: expanding the state space with exact shoe composition and multi-hand context made learning harder, and additional network complexity alone did not guarantee a stronger policy. The comparison motivated closer attention to state design, reward attribution, training duration, and evaluation methodology.
+The rule-based agent outperformed the saved neural checkpoints. This is a useful negative result: expanding the state space with exact shoe composition and multi-hand context made learning harder, and additional network complexity alone did not guarantee a stronger policy. Training budgets were also unequal (see training steps), so ranking reflects both architecture and compute.
+
+Vanilla DQN and tabular Q-learning are implemented and trainable, but were not part of the published checkpoint set above. The evaluator includes them automatically when local artifacts are present.
 
 The raw [CSV](docs/results/benchmark_results.csv) and [JSON](docs/results/benchmark_results.json) results are versioned with the project. Model checkpoints are intentionally excluded because of their size.
+
+## Ruleset
+
+Default casino rules in [`config.py`](config.py):
+
+- 2-deck shoe that persists between rounds
+- Reshuffle when fewer than 26 cards remain
+- Dealer stands on all 17s (S17), including soft 17
+- Double after split (DAS) and re-splits allowed (up to 4 hands)
+- No hitting split aces
 
 ## Environment
 
@@ -39,14 +52,16 @@ Each agent observes a `GameState` containing:
 - Active-hand and split-hand context
 - Counts of all remaining card values in the shoe
 
-Available actions are **hit**, **stand**, **double**, and **split**. The default shoe contains two complete decks, persists between rounds, and reshuffles at a configurable cut-card threshold.
+Neural agents encode this into a shared **19-dimensional** vector (hand features + shoe fraction + normalized count vector). An earlier DQN prototype used 8 features without shoe counts; all neural agents now share the shoe-aware encoding.
+
+Available actions are **hit**, **stand**, **double**, and **split**.
 
 ## Algorithms
 
 1. Tabular Q-learning
 2. Deep Q-Network (DQN)
 3. Double DQN
-4. Dueling DQN
+4. Dueling Double DQN
 5. Dueling Double DQN with prioritized experience replay
 
 A separate rule-based agent provides a non-learning benchmark. Neural agents use legal-action masking, replay buffers, target networks, and normalized state features.
@@ -68,19 +83,48 @@ Run the lightweight rule-based benchmark:
 python3 main.py --episodes 1000 --seed 42
 ```
 
-Evaluate every locally available trained checkpoint and regenerate the results:
+Evaluate locally available trained checkpoints (writes to `results/eval/` by default and does **not** overwrite published docs):
 
 ```bash
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-The evaluator skips checkpoints that are not present and always evaluates the rule baseline.
+To republish portfolio artifacts after training the published neural set:
+
+```bash
+python3 evaluate_agents.py --episodes 25000 --seed 42 --output-dir docs/results
+```
+
+## How to Train
+
+Each trainer accepts `--episodes` and `--seed`, and saves under `agents/<package>/results/` (gitignored):
+
+```bash
+python3 -m agents.q_learning_simple.train_q_learning_agent --seed 42
+python3 -m agents.deep_q_learning.train_deep_q_learning_agent --seed 42
+python3 -m agents.double_q_network_learning.train_double_q_network_learning_agent --seed 42
+python3 -m agents.dueling_dqn.train_dueling_dqn_agent --seed 42
+python3 -m agents.prioritized_replay.train_dueling_dqn_prioritized_agent --seed 42
+```
+
+Expected artifacts:
+
+| Agent | Checkpoint |
+|---|---|
+| Q-learning | `agents/q_learning_simple/results/q_table.json` |
+| DQN | `agents/deep_q_learning/results/deep_q_learning_model.pt` |
+| Double DQN | `agents/double_q_network_learning/results/double_q_network_model.pt` |
+| Dueling Double DQN | `agents/dueling_dqn/results/dueling_dqn_model.pt` |
+| Dueling Double DQN + PER | `agents/prioritized_replay/results/dueling_dqn_prioritized_model.pt` |
+
+Full training runs are long (tens to hundreds of thousands of episodes). Use a smaller `--episodes` value for smoke tests.
 
 ## Project Structure
 
 ```text
 ├── agents/                 # Rule, tabular, and neural agents
-├── docs/results/           # Reproducible benchmark outputs
+│   └── common.py           # Shared encoding, transitions, train helpers
+├── docs/results/           # Published benchmark outputs
 ├── tests/                  # Environment and agent tests
 ├── cards.py                # Finite shoe and hand abstractions
 ├── game.py                 # Blackjack rules and state transitions

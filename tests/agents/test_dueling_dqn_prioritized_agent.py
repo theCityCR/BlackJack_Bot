@@ -2,7 +2,7 @@ import torch
 
 from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
     ACTION_TO_INDEX,
-    DuelingDQNAgent,
+    PrioritizedDuelingDQNAgent,
     PrioritizedReplayBuffer,
     Transition,
 )
@@ -107,7 +107,7 @@ def test_prioritized_replay_buffer_updates_priorities():
 
 
 def test_agent_encodes_state_to_expected_size():
-    agent = DuelingDQNAgent(device="cpu")
+    agent = PrioritizedDuelingDQNAgent(device="cpu")
     state = make_state()
 
     encoded = agent.encode_state(state)
@@ -117,7 +117,7 @@ def test_agent_encodes_state_to_expected_size():
 
 
 def test_agent_legal_action_indices_are_correct():
-    agent = DuelingDQNAgent(device="cpu")
+    agent = PrioritizedDuelingDQNAgent(device="cpu")
 
     indices = agent.legal_action_indices([
         Action.HIT,
@@ -133,7 +133,7 @@ def test_agent_legal_action_indices_are_correct():
 
 
 def test_agent_choose_action_returns_legal_action_with_full_exploration():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         epsilon=1.0,
         device="cpu",
     )
@@ -147,7 +147,7 @@ def test_agent_choose_action_returns_legal_action_with_full_exploration():
 
 
 def test_agent_best_action_returns_legal_action():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         epsilon=0.0,
         device="cpu",
     )
@@ -161,7 +161,7 @@ def test_agent_best_action_returns_legal_action():
 
 
 def test_agent_remember_adds_transition_to_prioritized_buffer():
-    agent = DuelingDQNAgent(device="cpu")
+    agent = PrioritizedDuelingDQNAgent(device="cpu")
 
     state = make_state()
     next_state = make_state(player_value=18)
@@ -190,7 +190,7 @@ def test_agent_remember_adds_transition_to_prioritized_buffer():
 
 
 def test_agent_remember_terminal_transition():
-    agent = DuelingDQNAgent(device="cpu")
+    agent = PrioritizedDuelingDQNAgent(device="cpu")
 
     state = make_state()
 
@@ -213,7 +213,7 @@ def test_agent_remember_terminal_transition():
 
 
 def test_agent_train_step_does_nothing_when_buffer_too_small():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
         device="cpu",
     )
@@ -235,7 +235,7 @@ def test_agent_train_step_does_nothing_when_buffer_too_small():
 
 
 def test_agent_train_step_updates_model_when_buffer_large_enough():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
         min_replay_size=4,
         target_update_interval=100,
@@ -273,7 +273,7 @@ def test_agent_train_step_updates_model_when_buffer_large_enough():
 
 
 def test_agent_train_step_updates_priorities():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
         min_replay_size=4,
         device="cpu",
@@ -299,7 +299,7 @@ def test_agent_train_step_updates_priorities():
 
 
 def test_agent_target_model_updates_on_interval():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
         min_replay_size=4,
         target_update_interval=1,
@@ -326,7 +326,7 @@ def test_agent_target_model_updates_on_interval():
 
 
 def test_agent_decay_epsilon_respects_minimum():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         epsilon=0.06,
         epsilon_min=0.05,
         epsilon_decay=0.1,
@@ -339,7 +339,7 @@ def test_agent_decay_epsilon_respects_minimum():
 
 
 def test_agent_can_train_one_episode():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
         min_replay_size=4,
         train_updates_per_episode=1,
@@ -355,7 +355,7 @@ def test_agent_can_train_one_episode():
 
 
 def test_agent_can_play_one_episode_without_training():
-    agent = DuelingDQNAgent(
+    agent = PrioritizedDuelingDQNAgent(
         epsilon=0.0,
         device="cpu",
     )
