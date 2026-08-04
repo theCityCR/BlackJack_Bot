@@ -62,7 +62,7 @@ The project also provides a clear comparison between human-designed heuristics a
 
 The core game environment and rule-based benchmark are fully functional. The repository contains implementations of the major reinforcement learning agents, reproducible evaluation tooling, versioned benchmark results, and an automated test suite. Trained checkpoints are kept outside version control because of their size. The environment currently models a two-deck shoe by default and reshuffles only after reaching a configurable cut-card threshold.
 
-The saved neural checkpoints were evaluated alongside the rule-based baseline over 25,000 seeded rounds per agent. The rule baseline achieved the strongest average reward. Rather than hiding this negative result, the project documents it as evidence that a more complex architecture does not automatically overcome a large state space or imperfect state and reward design. Training step counts also differ across agents, so compute is part of the comparison. Full results are available in [`docs/results`](docs/results).
+The saved neural checkpoints were evaluated alongside the rule-based baseline over 25,000 seeded rounds per agent. The rule baseline achieved the strongest average reward. Rather than hiding this negative result, the project documents it as evidence that a more complex architecture does not automatically overcome a large state space or imperfect state and reward design. Those checkpoints used unequal training budgets; neural trainers now share a common episode count and hyperparameter schedule so architecture comparisons are not confounded by compute. Full results are available in [`docs/results`](docs/results).
 
 ## Project by the Numbers
 
@@ -72,7 +72,7 @@ The repository contains approximately **6,470 lines of Python**, including tests
 
 ### How many training episodes were run?
 
-The main configured training runs represent approximately **550,000 training episodes** across Q-learning, DQN, Double DQN, and Dueling DQN. Additional experimental reruns and the prioritized-replay model may put the lifetime total higher, so **550,000+ episodes** is the safest concise estimate. This number excludes evaluation-only simulations, including the 500,000-round rule-agent benchmark.
+Configured neural training is **800,000 episodes** (four agents × 200,000 under the shared protocol), plus tabular Q-learning at 50,000 by default. Lifetime experiment totals including earlier unequal runs are higher. These figures exclude evaluation-only simulations.
 
 ### How many reinforcement learning algorithms were implemented?
 

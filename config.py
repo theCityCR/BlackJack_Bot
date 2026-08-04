@@ -31,6 +31,30 @@ EPSILON_END = 0.05
 EPSILON_DECAY = 0.99999
 
 # =========================
+# Shared Neural DQN Training
+# =========================
+# All neural agents use these defaults so architecture comparisons are not
+# confounded by unequal episode budgets or optimizer schedules. Architecture
+# (network topology, Double/Dueling targets, prioritized replay) remains the
+# only intentional difference between neural trainers.
+
+NEURAL_TRAINING_EPISODES = 200_000
+NEURAL_CHECKPOINT_EVAL_EPISODES = 5_000
+NEURAL_FINAL_EVAL_EPISODES = 25_000
+NEURAL_PRINT_INTERVAL = 5_000
+
+NEURAL_LEARNING_RATE = 0.001
+NEURAL_DISCOUNT_FACTOR = 1.0
+NEURAL_EPSILON_START = 1.0
+NEURAL_EPSILON_MIN = 0.05
+NEURAL_EPSILON_DECAY = 0.99995
+NEURAL_REPLAY_SIZE = 100_000
+NEURAL_BATCH_SIZE = 128
+NEURAL_TARGET_UPDATE_INTERVAL = 2_000
+NEURAL_MIN_REPLAY_SIZE = 1_000
+NEURAL_TRAIN_UPDATES_PER_EPISODE = 2
+
+# =========================
 # Game Settings
 # =========================
 

@@ -7,7 +7,8 @@ The project implements five RL variants—from tabular Q-learning through Duelin
 ## Highlights
 
 - **Five RL variants** implemented directly in Python and PyTorch
-- **550,000+ configured training episodes** across the core experiments
+- **800,000+ configured neural training episodes** (4 × 200k under a shared protocol)
+- **Shared neural training budget** — same episodes, ε schedule, batch size, and updates/episode
 - **Persistent multi-deck shoe** with exact remaining-card composition
 - **Shared 19-feature state encoding** for all neural agents (shoe-aware)
 - **200 automated tests** for game rules, state transitions, and agent behavior
@@ -28,7 +29,9 @@ The available trained checkpoints and rule baseline were evaluated for 25,000 ro
 
 ![Average reward comparison](docs/results/benchmark_results.svg)
 
-The rule-based agent outperformed the saved neural checkpoints. This is a useful negative result: expanding the state space with exact shoe composition and multi-hand context made learning harder, and additional network complexity alone did not guarantee a stronger policy. Training budgets were also unequal (see training steps), so ranking reflects both architecture and compute.
+The rule-based agent outperformed the saved neural checkpoints. This is a useful negative result: expanding the state space with exact shoe composition and multi-hand context made learning harder, and additional network complexity alone did not guarantee a stronger policy.
+
+Those published checkpoints were trained under an earlier **unequal** protocol (see training steps). Neural trainers now share one budget and hyperparameter schedule in [`config.py`](config.py) so future runs isolate architecture differences. Retrain and re-evaluate to refresh the table.
 
 Vanilla DQN and tabular Q-learning are implemented and trainable, but were not part of the published checkpoint set above. The evaluator includes them automatically when local artifacts are present.
 
@@ -99,7 +102,7 @@ python3 evaluate_agents.py --episodes 25000 --seed 42 --output-dir docs/results
 
 ## How to Train
 
-Each trainer accepts `--episodes` and `--seed`, and saves under `agents/<package>/results/` (gitignored):
+Each trainer accepts `--episodes` and `--seed`, and saves under `agents/<package>/results/` (gitignored). Neural agents default to the shared protocol in `config.py` (`NEURAL_TRAINING_EPISODES`, batch size, ε decay, target updates, and `train_updates_per_episode`):
 
 ```bash
 python3 -m agents.q_learning_simple.train_q_learning_agent --seed 42

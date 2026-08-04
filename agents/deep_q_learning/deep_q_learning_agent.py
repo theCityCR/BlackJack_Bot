@@ -12,6 +12,18 @@ from agents.common import (
     Transition,
     encode_state,
 )
+from config import (
+    NEURAL_BATCH_SIZE,
+    NEURAL_DISCOUNT_FACTOR,
+    NEURAL_EPSILON_DECAY,
+    NEURAL_EPSILON_MIN,
+    NEURAL_EPSILON_START,
+    NEURAL_LEARNING_RATE,
+    NEURAL_MIN_REPLAY_SIZE,
+    NEURAL_REPLAY_SIZE,
+    NEURAL_TARGET_UPDATE_INTERVAL,
+    NEURAL_TRAIN_UPDATES_PER_EPISODE,
+)
 from game import Action, BlackjackGame, GameState
 
 
@@ -34,16 +46,16 @@ class DQN(nn.Module):
 class DeepQLearningAgent:
     def __init__(
         self,
-        learning_rate=0.001,
-        discount_factor=1.0,
-        epsilon=1.0,
-        epsilon_min=0.05,
-        epsilon_decay=0.99995,
-        replay_size=100_000,
-        batch_size=128,
-        target_update_interval=1000,
-        min_replay_size=1000,
-        train_updates_per_episode=1,
+        learning_rate=NEURAL_LEARNING_RATE,
+        discount_factor=NEURAL_DISCOUNT_FACTOR,
+        epsilon=NEURAL_EPSILON_START,
+        epsilon_min=NEURAL_EPSILON_MIN,
+        epsilon_decay=NEURAL_EPSILON_DECAY,
+        replay_size=NEURAL_REPLAY_SIZE,
+        batch_size=NEURAL_BATCH_SIZE,
+        target_update_interval=NEURAL_TARGET_UPDATE_INTERVAL,
+        min_replay_size=NEURAL_MIN_REPLAY_SIZE,
+        train_updates_per_episode=NEURAL_TRAIN_UPDATES_PER_EPISODE,
     ):
         self.discount_factor = discount_factor
 
