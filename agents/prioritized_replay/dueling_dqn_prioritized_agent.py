@@ -12,6 +12,18 @@ from agents.common import (
     Transition,
     encode_state,
 )
+from config import (
+    NEURAL_BATCH_SIZE,
+    NEURAL_DISCOUNT_FACTOR,
+    NEURAL_EPSILON_DECAY,
+    NEURAL_EPSILON_MIN,
+    NEURAL_EPSILON_START,
+    NEURAL_LEARNING_RATE,
+    NEURAL_MIN_REPLAY_SIZE,
+    NEURAL_REPLAY_SIZE,
+    NEURAL_TARGET_UPDATE_INTERVAL,
+    NEURAL_TRAIN_UPDATES_PER_EPISODE,
+)
 from game import Action, BlackjackGame, GameState
 
 
@@ -36,6 +48,11 @@ class PrioritizedReplayBuffer:
 
     def __len__(self):
         return len(self.buffer)
+
+    def clear(self) -> None:
+        self.buffer = []
+        self.priorities = []
+        self.position = 0
 
     def add(self, transition: Transition):
         max_priority = max(self.priorities, default=1.0)
@@ -114,16 +131,16 @@ class DuelingDQN(nn.Module):
 class PrioritizedDuelingDQNAgent:
     def __init__(
         self,
-        learning_rate: float = 0.001,
-        discount_factor: float = 1.0,
-        epsilon: float = 1.0,
-        epsilon_min: float = 0.05,
-        epsilon_decay: float = 0.9999,
-        replay_size: int = 100_000,
-        batch_size: int = 256,
-        target_update_interval: int = 2_000,
-        min_replay_size: int = 5_000,
-        train_updates_per_episode: int = 1,
+        learning_rate: float = NEURAL_LEARNING_RATE,
+        discount_factor: float = NEURAL_DISCOUNT_FACTOR,
+        epsilon: float = NEURAL_EPSILON_START,
+        epsilon_min: float = NEURAL_EPSILON_MIN,
+        epsilon_decay: float = NEURAL_EPSILON_DECAY,
+        replay_size: int = NEURAL_REPLAY_SIZE,
+        batch_size: int = NEURAL_BATCH_SIZE,
+        target_update_interval: int = NEURAL_TARGET_UPDATE_INTERVAL,
+        min_replay_size: int = NEURAL_MIN_REPLAY_SIZE,
+        train_updates_per_episode: int = NEURAL_TRAIN_UPDATES_PER_EPISODE,
         priority_alpha: float = 0.6,
         priority_beta_start: float = 0.4,
         priority_beta_increment: float = 0.00001,
@@ -166,9 +183,10 @@ class PrioritizedDuelingDQNAgent:
         )
 
         self.training_steps = 0
+        self.use_shoe_features = True
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        return encode_state(state)
+        return encode_state(state, use_shoe_features=self.use_shoe_features)
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]
