@@ -1,0 +1,14 @@
+---
+description: Solo maintainer workflow — merge feature branches into main without ceremony
+alwaysApply: true
+---
+
+# Solo merge workflow
+
+This repo has a single maintainer. When finishing a feature branch:
+
+1. Still use a feature branch and commits for the work itself.
+2. When asked to merge, ship, or land the work: merge into `main` promptly (local merge + push, or create a PR and merge it immediately).
+3. Do not wait for review, extra approval rounds, or leave an open unmerged PR unless the user asks to keep it open.
+4. Prefer deleting the remote feature branch after merge when using GitHub.
+5. Do not force-push `main`.
