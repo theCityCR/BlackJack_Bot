@@ -9,6 +9,7 @@ The project implements five RL variants—from tabular Q-learning through Duelin
 - **Five RL variants** implemented directly in Python and PyTorch
 - **800,000+ configured neural training episodes** (4 × 200k under a shared protocol)
 - **Shared neural training budget** — same episodes, ε schedule, batch size, and updates/episode
+- **Two-phase curriculum** — hand features first, then shoe-aware counts
 - **Persistent multi-deck shoe** with exact remaining-card composition
 - **Shared 19-feature state encoding** for all neural agents (shoe-aware)
 - **200 automated tests** for game rules, state transitions, and agent behavior
@@ -57,7 +58,7 @@ Each agent observes a `GameState` containing:
 - Active-hand and split-hand context
 - Counts of all remaining card values in the shoe
 
-Neural agents encode this into a shared **19-dimensional** vector (hand features + shoe fraction + normalized count vector). An earlier DQN prototype used 8 features without shoe counts; all neural agents now share the shoe-aware encoding.
+Neural agents encode this into a shared **19-dimensional** vector (hand features + shoe fraction + normalized count vector). An earlier DQN prototype used 8 features without shoe counts; all neural agents now share the shoe-aware encoding. Training defaults to a **two-phase curriculum**: phase A zeros shoe features so the agent learns hand policy first, then phase B enables the full count vector (replay is cleared at the boundary). Pass `--no-curriculum` to train shoe-aware from episode 1.
 
 Available actions are **hit**, **stand**, **double**, and **split**.
 
@@ -102,7 +103,7 @@ python3 evaluate_agents.py --episodes 25000 --seed 42 --output-dir docs/results
 
 ## How to Train
 
-Each trainer accepts `--episodes` and `--seed`, and saves under `agents/<package>/results/` (gitignored). Neural agents default to the shared protocol in `config.py` (`NEURAL_TRAINING_EPISODES`, batch size, ε decay, target updates, and `train_updates_per_episode`):
+Each trainer accepts `--episodes` and `--seed`, and saves under `agents/<package>/results/` (gitignored). Neural agents default to the shared protocol in `config.py` (`NEURAL_TRAINING_EPISODES`, batch size, ε decay, target updates, and `train_updates_per_episode`), including the hand-then-shoe curriculum (`--no-curriculum` to disable):
 
 ```bash
 python3 -m agents.q_learning_simple.train_q_learning_agent --seed 42

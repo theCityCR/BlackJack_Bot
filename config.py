@@ -54,6 +54,11 @@ NEURAL_TARGET_UPDATE_INTERVAL = 2_000
 NEURAL_MIN_REPLAY_SIZE = 1_000
 NEURAL_TRAIN_UPDATES_PER_EPISODE = 2
 
+# Phase A: hand features only (shoe counts zeroed). Phase B: full 19-D state.
+# Replay is cleared at the phase boundary so encodings stay consistent.
+NEURAL_CURRICULUM_ENABLED = True
+NEURAL_CURRICULUM_PHASE_A_EPISODES = 100_000
+
 # =========================
 # Game Settings
 # =========================

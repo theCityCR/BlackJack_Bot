@@ -24,10 +24,19 @@ from game import BlackjackGame
 MODEL_PATH = package_results_path(__file__, "dueling_dqn_model.pt")
 
 
-def train(num_episodes: int = NEURAL_TRAINING_EPISODES) -> DuelingDQNAgent:
+def train(
+    num_episodes: int = NEURAL_TRAINING_EPISODES,
+    *,
+    curriculum: bool | None = None,
+) -> DuelingDQNAgent:
     game = BlackjackGame()
     agent = DuelingDQNAgent(**neural_training_kwargs())
-    run_neural_training_loop(agent, game, num_episodes)
+    run_neural_training_loop(
+        agent,
+        game,
+        num_episodes,
+        curriculum=curriculum,
+    )
     save_torch_checkpoint(agent, MODEL_PATH)
     return agent
 
@@ -36,10 +45,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--episodes", type=int, default=NEURAL_TRAINING_EPISODES)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--no-curriculum",
+        action="store_true",
+        help="Use full shoe features from episode 1 (skip hand-only phase A)",
+    )
     args = parser.parse_args()
 
     set_seed(args.seed)
-    agent = train(args.episodes)
+    agent = train(
+        args.episodes,
+        curriculum=False if args.no_curriculum else None,
+    )
 
     final_reward, final_distribution = evaluate_greedy(
         agent,

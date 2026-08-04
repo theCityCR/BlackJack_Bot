@@ -101,6 +101,7 @@ Possible next steps include:
 - Explainable decisions showing why an agent selected a particular action
 - Automated experiment tracking and learning-curve comparison
 - Closing the performance gap with the rule baseline through state/reward redesign
+- Two-phase curriculum (hand features → shoe-aware state) is now the default neural training path; further tuning may still help
 
 ## Technology Stack
 

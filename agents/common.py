@@ -14,6 +14,8 @@ from config import (
     MAX_PLAYER_HANDS,
     NEURAL_BATCH_SIZE,
     NEURAL_CHECKPOINT_EVAL_EPISODES,
+    NEURAL_CURRICULUM_ENABLED,
+    NEURAL_CURRICULUM_PHASE_A_EPISODES,
     NEURAL_DISCOUNT_FACTOR,
     NEURAL_EPSILON_DECAY,
     NEURAL_EPSILON_MIN,
@@ -33,7 +35,9 @@ ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
 ACTION_TO_INDEX = {action: index for index, action in enumerate(ACTION_LIST)}
 
 INITIAL_SHOE_SIZE = 52 * NUM_DECKS
-STATE_SIZE = 19
+HAND_FEATURE_COUNT = 8
+SHOE_FEATURE_COUNT = 11  # remaining-card fraction + 10 rank counts
+STATE_SIZE = HAND_FEATURE_COUNT + SHOE_FEATURE_COUNT
 
 
 @dataclass
@@ -46,19 +50,20 @@ class Transition:
     next_legal_action_indices: list[int]
 
 
-def encode_state(state: GameState) -> torch.Tensor:
-    """Encode a GameState into the shared 19-feature vector."""
+def encode_state(
+    state: GameState,
+    *,
+    use_shoe_features: bool = True,
+) -> torch.Tensor:
+    """Encode a GameState into the shared 19-feature vector.
+
+    When ``use_shoe_features`` is False (curriculum phase A), the shoe fraction
+    and remaining-card counts are zeroed so the agent learns hand policy first.
+    """
     count_vector = tuple(state.count_vector)
     cards_remaining = sum(count_vector)
 
-    if cards_remaining == 0:
-        normalized_count_vector = [0.0] * 10
-    else:
-        normalized_count_vector = [
-            count / cards_remaining for count in count_vector
-        ]
-
-    basic_state = [
+    hand_features = [
         state.player_value / 21,
         state.dealer_upcard / 10,
         float(state.usable_ace),
@@ -67,11 +72,24 @@ def encode_state(state: GameState) -> torch.Tensor:
         float(state.is_split_hand),
         state.active_hand_index / MAX_PLAYER_HANDS,
         state.num_hands / MAX_PLAYER_HANDS,
-        cards_remaining / INITIAL_SHOE_SIZE,
     ]
 
+    if use_shoe_features:
+        if cards_remaining == 0:
+            normalized_count_vector = [0.0] * 10
+        else:
+            normalized_count_vector = [
+                count / cards_remaining for count in count_vector
+            ]
+        shoe_features = [
+            cards_remaining / INITIAL_SHOE_SIZE,
+            *normalized_count_vector,
+        ]
+    else:
+        shoe_features = [0.0] * SHOE_FEATURE_COUNT
+
     return torch.tensor(
-        basic_state + normalized_count_vector,
+        hand_features + shoe_features,
         dtype=torch.float32,
     )
 
@@ -124,6 +142,18 @@ def neural_training_kwargs() -> dict[str, Any]:
     }
 
 
+def clear_replay_buffer(agent: Any) -> None:
+    """Drop stored transitions (used at curriculum phase boundaries)."""
+    buffer = agent.replay_buffer
+    if hasattr(buffer, "clear"):
+        buffer.clear()
+        return
+
+    raise TypeError(
+        f"Replay buffer {type(buffer).__name__} does not support clear()"
+    )
+
+
 def run_neural_training_loop(
     agent: Any,
     game: Any,
@@ -131,15 +161,46 @@ def run_neural_training_loop(
     *,
     print_interval: int = NEURAL_PRINT_INTERVAL,
     checkpoint_eval_episodes: int = NEURAL_CHECKPOINT_EVAL_EPISODES,
+    curriculum: bool | None = None,
+    phase_a_episodes: int | None = None,
 ) -> Any:
     """Train for ``num_episodes`` with periodic greedy evaluation logging.
 
-    All neural trainers share this loop so progress reporting and eval cadence
-    stay comparable across architectures.
+    When curriculum is enabled, phase A trains on hand features only (shoe
+    inputs zeroed). Phase B enables the full shoe-aware encoding and clears
+    the replay buffer so mixed encodings are not sampled together.
     """
+    use_curriculum = (
+        NEURAL_CURRICULUM_ENABLED if curriculum is None else curriculum
+    )
+    phase_a = (
+        NEURAL_CURRICULUM_PHASE_A_EPISODES
+        if phase_a_episodes is None
+        else phase_a_episodes
+    )
+    if not use_curriculum:
+        phase_a = 0
+
+    phase_a = max(0, min(phase_a, num_episodes))
+    agent.use_shoe_features = phase_a == 0
+    if use_curriculum and phase_a > 0:
+        print(
+            f"Curriculum phase A: hand features only "
+            f"(episodes 1–{phase_a})"
+        )
+
     total_training_reward = 0.0
 
     for episode in range(1, num_episodes + 1):
+        if use_curriculum and phase_a > 0 and episode == phase_a + 1:
+            agent.use_shoe_features = True
+            clear_replay_buffer(agent)
+            print(
+                f"Curriculum phase B: enabling shoe features "
+                f"(episodes {phase_a + 1}–{num_episodes}); "
+                "cleared replay buffer"
+            )
+
         reward = agent.train_one_episode(game)
         total_training_reward += reward
 
@@ -148,10 +209,12 @@ def run_neural_training_loop(
                 agent,
                 checkpoint_eval_episodes,
             )
+            shoe_mode = "on" if agent.use_shoe_features else "off"
             print(f"Episode {episode}")
             print(f"Average training reward: {total_training_reward / episode:.4f}")
             print(f"Evaluation reward:        {eval_reward:.4f}")
             print(f"Epsilon:                  {agent.epsilon:.4f}")
+            print(f"Shoe features:            {shoe_mode}")
             print(f"Replay buffer size:       {len(agent.replay_buffer)}")
             print(f"Training steps:           {agent.training_steps}")
             print("Evaluation distribution:")

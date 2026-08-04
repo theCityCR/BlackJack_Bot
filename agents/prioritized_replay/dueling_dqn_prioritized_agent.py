@@ -49,6 +49,11 @@ class PrioritizedReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
+    def clear(self) -> None:
+        self.buffer = []
+        self.priorities = []
+        self.position = 0
+
     def add(self, transition: Transition):
         max_priority = max(self.priorities, default=1.0)
 
@@ -178,9 +183,10 @@ class PrioritizedDuelingDQNAgent:
         )
 
         self.training_steps = 0
+        self.use_shoe_features = True
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        return encode_state(state)
+        return encode_state(state, use_shoe_features=self.use_shoe_features)
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]

@@ -107,9 +107,10 @@ class DuelingDQNAgent:
 
         self.replay_buffer = deque(maxlen=replay_size)
         self.training_steps = 0
+        self.use_shoe_features = True
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        return encode_state(state)
+        return encode_state(state, use_shoe_features=self.use_shoe_features)
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]
