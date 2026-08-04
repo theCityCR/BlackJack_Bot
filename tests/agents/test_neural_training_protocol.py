@@ -30,6 +30,8 @@ def test_neural_training_kwargs_match_config():
     assert kwargs["target_update_interval"] == NEURAL_TARGET_UPDATE_INTERVAL
     assert kwargs["min_replay_size"] == NEURAL_MIN_REPLAY_SIZE
     assert kwargs["train_updates_per_episode"] == NEURAL_TRAIN_UPDATES_PER_EPISODE
+    assert kwargs["train_updates_per_episode"] == 4
+    assert kwargs["epsilon_decay"] == 0.99997
 
 
 def test_neural_agents_share_default_training_hyperparameters():
