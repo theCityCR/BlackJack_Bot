@@ -2,6 +2,14 @@
 config.py
 
 Global configuration values for the Blackjack ML project.
+
+Default ruleset:
+- 2-deck shoe that persists between rounds
+- Reshuffle when fewer than 26 cards remain
+- Dealer stands on all 17s (S17), including soft 17
+- Double after split allowed (DAS)
+- Re-split allowed up to MAX_PLAYER_HANDS
+- No hitting split aces
 """
 
 # =========================
@@ -58,4 +66,5 @@ REWARD_DRAW = 0
 # File Paths
 # =========================
 
-Q_TABLE_PATH = "results/q_table.json"
+# Relative name only; trainers resolve under agents/<pkg>/results/.
+Q_TABLE_PATH = "q_table.json"
