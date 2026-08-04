@@ -13,6 +13,8 @@ The project implements five RL variants—from tabular Q-learning through Duelin
 - **200 automated tests** for game rules, state transitions, and agent behavior
 - **Reproducible evaluation** with seeded runs and machine-readable output
 
+**Takeaway:** a stronger network does not automatically beat a simpler policy when the state space grows—careful state and reward design matter more than architecture complexity alone.
+
 ## Results
 
 The available trained checkpoints and rule baseline were evaluated for 25,000 rounds each using seed 42 and the same game configuration. Win/loss/draw rates use the sign of the **net round reward** (so doubles and splits collapse to one outcome per round).
