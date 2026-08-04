@@ -1,8 +1,18 @@
-import os
+"""Train the Dueling Double DQN Blackjack agent."""
+
+from __future__ import annotations
+
+import argparse
 from collections import defaultdict
 
-import torch
-
+from agents.common import (
+    categorize_reward,
+    evaluate_greedy,
+    package_results_path,
+    print_distribution,
+    save_torch_checkpoint,
+    set_seed,
+)
 from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
 from game import BlackjackGame
 
@@ -10,73 +20,11 @@ from game import BlackjackGame
 NUM_TRAINING_EPISODES = 100_000
 FINAL_EVALUATION_EPISODES = 100_000
 PRINT_INTERVAL = 5_000
-
-MODEL_PATH = "results/dueling_dqn_model.pt"
-
-
-def categorize_reward(reward: float) -> str:
-    if reward == 0:
-        return "draw"
-    if reward == 1:
-        return "normal_win"
-    if reward == -1:
-        return "normal_loss"
-    if reward == 1.5:
-        return "blackjack_win"
-    if reward > 1:
-        return "big_win_double_or_split"
-    if reward < -1:
-        return "big_loss_double_or_split"
-
-    return "other"
+MODEL_PATH = package_results_path(__file__, "dueling_dqn_model.pt")
 
 
-def evaluate(agent: DuelingDQNAgent, num_episodes: int):
+def train(num_episodes: int = NUM_TRAINING_EPISODES) -> DuelingDQNAgent:
     game = BlackjackGame()
-
-    old_epsilon = agent.epsilon
-    agent.epsilon = 0.0
-
-    total_reward = 0.0
-    distribution = defaultdict(int)
-
-    for _ in range(num_episodes):
-        reward = agent.play_episode(game)
-        total_reward += reward
-        distribution[categorize_reward(reward)] += 1
-
-    agent.epsilon = old_epsilon
-
-    return total_reward / num_episodes, distribution
-
-
-def print_distribution(distribution):
-    total = sum(distribution.values())
-
-    for category in sorted(distribution):
-        count = distribution[category]
-        percentage = count / total
-        print(f"{category:30s}: {count:8d} ({percentage:.2%})")
-
-
-def save_agent(agent: DuelingDQNAgent, path: str):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    torch.save(
-        {
-            "model_state_dict": agent.model.state_dict(),
-            "target_model_state_dict": agent.target_model.state_dict(),
-            "optimizer_state_dict": agent.optimizer.state_dict(),
-            "epsilon": agent.epsilon,
-            "training_steps": agent.training_steps,
-        },
-        path,
-    )
-
-
-def train():
-    game = BlackjackGame()
-
     agent = DuelingDQNAgent(
         learning_rate=0.001,
         discount_factor=1.0,
@@ -91,11 +39,10 @@ def train():
     )
 
     interval_reward = 0.0
-    interval_distribution = defaultdict(int)
+    interval_distribution: dict[str, int] = defaultdict(int)
 
-    for episode in range(1, NUM_TRAINING_EPISODES + 1):
+    for episode in range(1, num_episodes + 1):
         reward = agent.train_one_episode(game)
-
         interval_reward += reward
         interval_distribution[categorize_reward(reward)] += 1
 
@@ -111,23 +58,26 @@ def train():
             print("Training distribution:")
             print_distribution(interval_distribution)
             print()
-
             interval_reward = 0.0
             interval_distribution = defaultdict(int)
 
+    save_torch_checkpoint(agent, MODEL_PATH)
     return agent
 
 
-def main():
-    agent = train()
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--episodes", type=int, default=NUM_TRAINING_EPISODES)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
 
-    save_agent(agent, MODEL_PATH)
+    set_seed(args.seed)
+    agent = train(args.episodes)
 
-    final_reward, final_distribution = evaluate(
+    final_reward, final_distribution = evaluate_greedy(
         agent,
         FINAL_EVALUATION_EPISODES,
     )
-
     print(f"Saved model to: {MODEL_PATH}")
     print()
     print(f"Final evaluation episodes: {FINAL_EVALUATION_EPISODES}")

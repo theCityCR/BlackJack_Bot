@@ -41,6 +41,7 @@ class QLearningAgent:
         self.epsilon_decay = epsilon_decay
 
         self.q_table = defaultdict(self._default_action_values)
+        self.training_steps = 0
 
     def _default_action_values(self):
         return {
@@ -119,6 +120,7 @@ class QLearningAgent:
         self.q_table[state_key][action] += self.learning_rate * (
             target - current_q
         )
+        self.training_steps += 1
 
     def _normalize_available_actions(
         self,
@@ -262,3 +264,43 @@ class QLearningAgent:
             state = next_state
 
         return reward
+
+    def save(self, path: str) -> None:
+        """Persist the Q-table and training metadata to JSON."""
+        import json
+        from pathlib import Path
+
+        path_obj = Path(path)
+        path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        serialized_table = {}
+        for state_key, action_values in self.q_table.items():
+            key = json.dumps(list(state_key))
+            serialized_table[key] = {
+                action.name: value for action, value in action_values.items()
+            }
+
+        payload = {
+            "epsilon": self.epsilon,
+            "training_steps": getattr(self, "training_steps", 0),
+            "q_table": serialized_table,
+        }
+        path_obj.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    @classmethod
+    def load(cls, path: str) -> "QLearningAgent":
+        """Load a Q-learning agent from a JSON checkpoint."""
+        import json
+        from pathlib import Path
+
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        agent = cls()
+        agent.epsilon = float(payload.get("epsilon", 0.0))
+        agent.training_steps = int(payload.get("training_steps", 0))
+
+        for key, action_values in payload.get("q_table", {}).items():
+            state_key = tuple(json.loads(key))
+            agent.q_table[state_key] = {
+                Action[name]: float(value) for name, value in action_values.items()
+            }
+        return agent
