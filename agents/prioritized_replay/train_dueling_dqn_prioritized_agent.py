@@ -1,64 +1,67 @@
-"""Train the Double DQN Blackjack agent."""
+"""Train the Dueling Double DQN agent with prioritized experience replay."""
 
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 
 from agents.common import (
+    categorize_reward,
     evaluate_greedy,
     package_results_path,
     print_distribution,
     save_torch_checkpoint,
     set_seed,
 )
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
+from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
+    PrioritizedDuelingDQNAgent,
 )
 from game import BlackjackGame
 
 
-NUM_TRAINING_EPISODES = 200_000
-CHECKPOINT_EVALUATION_EPISODES = 10_000
-FINAL_EVALUATION_EPISODES = 100_000
+NUM_TRAINING_EPISODES = 50_000
+FINAL_EVALUATION_EPISODES = 25_000
 PRINT_INTERVAL = 5_000
-MODEL_PATH = package_results_path(__file__, "double_q_network_model.pt")
+MODEL_PATH = package_results_path(__file__, "dueling_dqn_prioritized_model.pt")
 
 
-def train(num_episodes: int = NUM_TRAINING_EPISODES) -> DoubleQNetworkLearningAgent:
+def train(num_episodes: int = NUM_TRAINING_EPISODES) -> PrioritizedDuelingDQNAgent:
     game = BlackjackGame()
-    agent = DoubleQNetworkLearningAgent(
-        learning_rate=0.0005,
+    agent = PrioritizedDuelingDQNAgent(
+        learning_rate=0.001,
         discount_factor=1.0,
         epsilon=1.0,
         epsilon_min=0.05,
-        epsilon_decay=0.99995,
+        epsilon_decay=0.9999,
         replay_size=100_000,
-        batch_size=128,
-        target_update_interval=5_000,
-        min_replay_size=1_000,
-        train_updates_per_episode=2,
+        batch_size=256,
+        target_update_interval=2_000,
+        min_replay_size=5_000,
+        train_updates_per_episode=1,
     )
 
-    total_training_reward = 0.0
+    interval_reward = 0.0
+    interval_distribution: dict[str, int] = defaultdict(int)
 
     for episode in range(1, num_episodes + 1):
         reward = agent.train_one_episode(game)
-        total_training_reward += reward
+        interval_reward += reward
+        interval_distribution[categorize_reward(reward)] += 1
 
         if episode % PRINT_INTERVAL == 0:
-            eval_reward, eval_distribution = evaluate_greedy(
-                agent,
-                CHECKPOINT_EVALUATION_EPISODES,
-            )
             print(f"Episode {episode}")
-            print(f"Average training reward: {total_training_reward / episode:.4f}")
-            print(f"Evaluation reward:        {eval_reward:.4f}")
+            print(
+                f"Average reward over last {PRINT_INTERVAL} episodes: "
+                f"{interval_reward / PRINT_INTERVAL:.4f}"
+            )
             print(f"Epsilon:                  {agent.epsilon:.4f}")
             print(f"Replay buffer size:       {len(agent.replay_buffer)}")
             print(f"Training steps:           {agent.training_steps}")
-            print("Evaluation distribution:")
-            print_distribution(eval_distribution)
+            print("Training distribution:")
+            print_distribution(interval_distribution)
             print()
+            interval_reward = 0.0
+            interval_distribution = defaultdict(int)
 
     save_torch_checkpoint(agent, MODEL_PATH)
     return agent
@@ -77,11 +80,12 @@ def main() -> None:
         agent,
         FINAL_EVALUATION_EPISODES,
     )
+    print(f"Saved model to: {MODEL_PATH}")
+    print()
     print(f"Final evaluation episodes: {FINAL_EVALUATION_EPISODES}")
     print(f"Final average reward:      {final_reward:.4f}")
-    print("Final distribution:")
+    print("Final evaluation distribution:")
     print_distribution(final_distribution)
-    print(f"\nSaved model to: {MODEL_PATH}")
 
 
 if __name__ == "__main__":

@@ -1,26 +1,18 @@
 import random
 from collections import deque
-from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from agents.common import (
+    ACTION_LIST,
+    ACTION_TO_INDEX,
+    STATE_SIZE,
+    Transition,
+    encode_state,
+)
 from game import Action, BlackjackGame, GameState
-
-
-ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
-ACTION_TO_INDEX = {action: i for i, action in enumerate(ACTION_LIST)}
-
-
-@dataclass
-class Transition:
-    state: torch.Tensor
-    action_index: int
-    reward: float
-    next_state: torch.Tensor | None
-    done: bool
-    next_legal_action_indices: list[int]
 
 
 class DQN(nn.Module):
@@ -64,8 +56,11 @@ class DeepQLearningAgent:
         self.min_replay_size = min_replay_size
         self.train_updates_per_episode = train_updates_per_episode
 
-        self.model = DQN(input_size=8, output_size=4)
-        self.target_model = DQN(input_size=8, output_size=4)
+        self.input_size = STATE_SIZE
+        self.output_size = len(ACTION_LIST)
+
+        self.model = DQN(self.input_size, self.output_size)
+        self.target_model = DQN(self.input_size, self.output_size)
         self.target_model.load_state_dict(self.model.state_dict())
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -75,19 +70,7 @@ class DeepQLearningAgent:
         self.training_steps = 0
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        return torch.tensor(
-            [
-                state.player_value / 21,
-                state.dealer_upcard / 10,
-                float(state.usable_ace),
-                float(state.can_double),
-                float(state.can_split),
-                float(state.is_split_hand),
-                state.active_hand_index / 4,
-                state.num_hands / 4,
-            ],
-            dtype=torch.float32,
-        )
+        return encode_state(state)
 
     def legal_action_indices(self, available_actions):
         return [ACTION_TO_INDEX[action] for action in available_actions]

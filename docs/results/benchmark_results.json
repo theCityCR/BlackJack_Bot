@@ -20,7 +20,7 @@
       "training_steps": 379264
     },
     {
-      "agent": "Dueling DQN",
+      "agent": "Dueling Double DQN",
       "episodes": 25000,
       "average_reward": -0.11086,
       "win_rate": 0.40668,

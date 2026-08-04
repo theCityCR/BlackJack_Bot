@@ -6,7 +6,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+dist/
+build/
+.coverage
+htmlcov/
+.mypy_cache/
 
-# Generated training artifacts
+# Generated training / evaluation artifacts (not published docs/results)
 agents/**/results/
 /results/

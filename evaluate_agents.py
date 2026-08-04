@@ -1,5 +1,7 @@
 """Evaluate the rule agent and locally available trained checkpoints."""
 
+from __future__ import annotations
+
 import argparse
 import csv
 import json
@@ -9,35 +11,55 @@ from typing import Any
 
 import torch
 
+from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
 from agents.double_q_network_learning.double_q_network_learning_agent import (
     DoubleQNetworkLearningAgent,
 )
 from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
 from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    DuelingDQNAgent as PrioritizedDuelingDQNAgent,
+    PrioritizedDuelingDQNAgent,
 )
+from agents.q_learning_simple.q_learning_agent import QLearningAgent
 from agents.rule_agent.rule_agent import RuleAgent
 from game import BlackjackGame
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-CHECKPOINTS = {
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "results" / "eval"
+DOCS_RESULTS_DIR = PROJECT_ROOT / "docs" / "results"
+PUBLISHED_NEURAL_AGENTS = {
+    "Double DQN",
+    "Dueling Double DQN",
+    "Dueling Double DQN + PER",
+}
+
+TORCH_CHECKPOINTS: dict[str, tuple[type, Path]] = {
+    "DQN": (
+        DeepQLearningAgent,
+        PROJECT_ROOT / "agents/deep_q_learning/results/deep_q_learning_model.pt",
+    ),
     "Double DQN": (
         DoubleQNetworkLearningAgent,
-        PROJECT_ROOT / "agents/double_q_network_learning/results/double_q_network_model.pt",
+        PROJECT_ROOT
+        / "agents/double_q_network_learning/results/double_q_network_model.pt",
     ),
-    "Dueling DQN": (
+    "Dueling Double DQN": (
         DuelingDQNAgent,
         PROJECT_ROOT / "agents/dueling_dqn/results/dueling_dqn_model.pt",
     ),
     "Dueling Double DQN + PER": (
         PrioritizedDuelingDQNAgent,
-        PROJECT_ROOT / "agents/prioritized_replay/results/dueling_dqn_prioritized_model.pt",
+        PROJECT_ROOT
+        / "agents/prioritized_replay/results/dueling_dqn_prioritized_model.pt",
     ),
 }
 
+Q_TABLE_PATH = (
+    PROJECT_ROOT / "agents/q_learning_simple/results/q_table.json"
+)
 
-def load_agent(agent_class, checkpoint_path: Path):
+
+def load_torch_agent(agent_class, checkpoint_path: Path):
     """Construct an inference-only agent from a training checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     try:
@@ -49,6 +71,12 @@ def load_agent(agent_class, checkpoint_path: Path):
     agent.model.eval()
     agent.epsilon = 0.0
     return agent, checkpoint.get("training_steps")
+
+
+def load_q_learning_agent(checkpoint_path: Path):
+    agent = QLearningAgent.load(str(checkpoint_path))
+    agent.epsilon = 0.0
+    return agent, getattr(agent, "training_steps", None)
 
 
 def evaluate_agent(name: str, agent, episodes: int, seed: int) -> dict[str, Any]:
@@ -81,11 +109,18 @@ def write_results(results: list[dict[str, Any]], output_dir: Path, seed: int) ->
         encoding="utf-8",
     )
 
-    with (output_dir / "benchmark_results.csv").open("w", newline="", encoding="utf-8") as file:
+    with (output_dir / "benchmark_results.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
-            file,
-            fieldnames=results[0].keys(),
-            lineterminator="\n",
+            handle,
+            fieldnames=[
+                "agent",
+                "episodes",
+                "average_reward",
+                "win_rate",
+                "loss_rate",
+                "draw_rate",
+                "training_steps",
+            ],
         )
         writer.writeheader()
         writer.writerows(results)
@@ -94,11 +129,14 @@ def write_results(results: list[dict[str, Any]], output_dir: Path, seed: int) ->
 
 
 def write_svg(results: list[dict[str, Any]], path: Path) -> None:
-    """Create a dependency-free average-reward comparison chart."""
-    width, height = 900, 110 + 76 * len(results)
-    plot_left, zero_x, scale = 250, 500, 1200
-    rows = []
+    width = 760
+    height = 90 + 76 * len(results)
+    plot_left = 260
+    plot_right = 700
+    zero_x = plot_left + (plot_right - plot_left) * 0.55
+    scale = (plot_right - plot_left) * 0.45 / 0.15
 
+    rows = []
     for index, result in enumerate(results):
         y = 85 + index * 76
         reward = result["average_reward"]
@@ -124,22 +162,57 @@ def write_svg(results: list[dict[str, Any]], path: Path) -> None:
     path.write_text(svg, encoding="utf-8")
 
 
+def collect_agents() -> list[tuple[str, Any, Any]]:
+    agents: list[tuple[str, Any, Any]] = [("Rule-based baseline", RuleAgent(), None)]
+
+    if Q_TABLE_PATH.exists():
+        agent, training_steps = load_q_learning_agent(Q_TABLE_PATH)
+        agents.append(("Q-learning", agent, training_steps))
+    else:
+        print(f"Skipping Q-learning: checkpoint not found at {Q_TABLE_PATH}")
+
+    for name, (agent_class, checkpoint_path) in TORCH_CHECKPOINTS.items():
+        if not checkpoint_path.exists():
+            print(f"Skipping {name}: checkpoint not found at {checkpoint_path}")
+            continue
+        agent, training_steps = load_torch_agent(agent_class, checkpoint_path)
+        agents.append((name, agent, training_steps))
+
+    return agents
+
+
+def guard_docs_publish(output_dir: Path, evaluated_names: set[str]) -> None:
+    """Refuse incomplete overwrites of the published portfolio results."""
+    if output_dir.resolve() != DOCS_RESULTS_DIR.resolve():
+        return
+
+    missing = PUBLISHED_NEURAL_AGENTS - evaluated_names
+    if missing:
+        missing_list = ", ".join(sorted(missing))
+        raise SystemExit(
+            "Refusing to overwrite docs/results without the published neural "
+            f"checkpoints ({missing_list}). Train those agents first, or write "
+            "to the default results/eval directory."
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--episodes", type=int, default=25_000)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "docs/results")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="Where to write JSON/CSV/SVG (default: results/eval).",
+    )
     args = parser.parse_args()
     if args.episodes <= 0:
         parser.error("--episodes must be positive")
 
-    agents = [("Rule-based baseline", RuleAgent(), None)]
-    for name, (agent_class, checkpoint_path) in CHECKPOINTS.items():
-        if not checkpoint_path.exists():
-            print(f"Skipping {name}: checkpoint not found at {checkpoint_path}")
-            continue
-        agent, training_steps = load_agent(agent_class, checkpoint_path)
-        agents.append((name, agent, training_steps))
+    agents = collect_agents()
+    evaluated_names = {name for name, _, _ in agents}
+    guard_docs_publish(args.output_dir, evaluated_names)
 
     results = []
     for name, agent, training_steps in agents:

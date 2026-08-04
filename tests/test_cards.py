@@ -298,7 +298,7 @@ def test_finite_deck_count_vector_scales_with_num_decks(num_decks):
     assert deck.get_count_vector() == expected_count_vector(num_decks)
 
 
-def test_deck_draw_card_returns_valid_value():
+def test_deck_draw_exhausts_all_cards_with_valid_values():
     deck = Deck()
 
     initial_cards_remaining = deck.cards_remaining()

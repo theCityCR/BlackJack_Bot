@@ -1,30 +1,19 @@
 import random
 from collections import deque
-from dataclasses import dataclass
 from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from config import MAX_PLAYER_HANDS, NUM_DECKS
+from agents.common import (
+    ACTION_LIST,
+    ACTION_TO_INDEX,
+    STATE_SIZE,
+    Transition,
+    encode_state,
+)
 from game import Action, BlackjackGame, GameState
-
-
-ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
-ACTION_TO_INDEX = {action: index for index, action in enumerate(ACTION_LIST)}
-
-INITIAL_SHOE_SIZE = 52 * NUM_DECKS
-
-
-@dataclass
-class Transition:
-    state: torch.Tensor
-    action_index: int
-    reward: float
-    next_state: Optional[torch.Tensor]
-    done: bool
-    next_legal_action_indices: list[int]
 
 
 class DuelingDQN(nn.Module):
@@ -85,7 +74,7 @@ class DuelingDQNAgent:
         self.min_replay_size = min_replay_size
         self.train_updates_per_episode = train_updates_per_episode
 
-        self.input_size = 19
+        self.input_size = STATE_SIZE
         self.output_size = len(ACTION_LIST)
 
         if device is None:
@@ -108,33 +97,7 @@ class DuelingDQNAgent:
         self.training_steps = 0
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        count_vector = tuple(state.count_vector)
-        cards_remaining = sum(count_vector)
-
-        if cards_remaining == 0:
-            normalized_count_vector = [0.0] * 10
-        else:
-            normalized_count_vector = [
-                count / cards_remaining
-                for count in count_vector
-            ]
-
-        basic_state = [
-            state.player_value / 21,
-            state.dealer_upcard / 10,
-            float(state.usable_ace),
-            float(state.can_double),
-            float(state.can_split),
-            float(state.is_split_hand),
-            state.active_hand_index / MAX_PLAYER_HANDS,
-            state.num_hands / MAX_PLAYER_HANDS,
-            cards_remaining / INITIAL_SHOE_SIZE,
-        ]
-
-        return torch.tensor(
-            basic_state + normalized_count_vector,
-            dtype=torch.float32,
-        )
+        return encode_state(state)
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]
