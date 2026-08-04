@@ -37,6 +37,15 @@ class LearningCurveLogger:
         epsilon: float,
         shoe_features_on: bool,
     ) -> None:
-        raise NotImplementedError(
-            "Wave 1: implement LearningCurveLogger.append in agents/learning_curves.py"
-        )
+        with self.path.open("a", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=LEARNING_CURVE_FIELDNAMES)
+            writer.writerow(
+                {
+                    "episode": episode,
+                    "training_steps": training_steps,
+                    "eval_reward": eval_reward,
+                    "epsilon": epsilon,
+                    "shoe_features_on": int(shoe_features_on),
+                }
+            )
+            handle.flush()
