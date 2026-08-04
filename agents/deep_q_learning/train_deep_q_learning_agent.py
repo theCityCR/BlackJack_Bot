@@ -16,18 +16,21 @@ from agents.common import (
 from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
 from config import (
     NEURAL_FINAL_EVAL_EPISODES,
+    NEURAL_LEARNING_CURVE_FILENAME,
     NEURAL_TRAINING_EPISODES,
 )
 from game import BlackjackGame
 
 
 MODEL_PATH = package_results_path(__file__, "deep_q_learning_model.pt")
+CURVE_PATH = package_results_path(__file__, NEURAL_LEARNING_CURVE_FILENAME)
 
 
 def train(
     num_episodes: int = NEURAL_TRAINING_EPISODES,
     *,
     curriculum: bool | None = None,
+    warmstart: bool | None = None,
 ) -> DeepQLearningAgent:
     game = BlackjackGame()
     agent = DeepQLearningAgent(**neural_training_kwargs())
@@ -36,6 +39,8 @@ def train(
         game,
         num_episodes,
         curriculum=curriculum,
+        warmstart=warmstart,
+        learning_curve_path=CURVE_PATH,
     )
     save_torch_checkpoint(agent, MODEL_PATH)
     return agent
@@ -50,12 +55,18 @@ def main() -> None:
         action="store_true",
         help="Use full shoe features from episode 1 (skip hand-only phase A)",
     )
+    parser.add_argument(
+        "--no-warmstart",
+        action="store_true",
+        help="Skip rule-agent behavior cloning before RL",
+    )
     args = parser.parse_args()
 
     set_seed(args.seed)
     agent = train(
         args.episodes,
         curriculum=False if args.no_curriculum else None,
+        warmstart=False if args.no_warmstart else None,
     )
 
     final_eval_reward, final_distribution = evaluate_greedy(

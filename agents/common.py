@@ -20,12 +20,16 @@ from config import (
     NEURAL_EPSILON_DECAY,
     NEURAL_EPSILON_MIN,
     NEURAL_EPSILON_START,
+    NEURAL_LEARNING_CURVE_ENABLED,
+    NEURAL_LEARNING_CURVE_FILENAME,
     NEURAL_LEARNING_RATE,
     NEURAL_MIN_REPLAY_SIZE,
     NEURAL_PRINT_INTERVAL,
     NEURAL_REPLAY_SIZE,
     NEURAL_TARGET_UPDATE_INTERVAL,
     NEURAL_TRAIN_UPDATES_PER_EPISODE,
+    NEURAL_WARMSTART_ENABLED,
+    NEURAL_WARMSTART_EPISODES,
     NUM_DECKS,
 )
 from game import Action, GameState
@@ -163,13 +167,24 @@ def run_neural_training_loop(
     checkpoint_eval_episodes: int = NEURAL_CHECKPOINT_EVAL_EPISODES,
     curriculum: bool | None = None,
     phase_a_episodes: int | None = None,
+    warmstart: bool | None = None,
+    warmstart_episodes: int | None = None,
+    learning_curve_path: Path | str | None = None,
+    force_shoe_off: bool = False,
 ) -> Any:
     """Train for ``num_episodes`` with periodic greedy evaluation logging.
 
-    When curriculum is enabled, phase A trains on hand features only (shoe
-    inputs zeroed). Phase B enables the full shoe-aware encoding and clears
-    the replay buffer so mixed encodings are not sampled together.
+    Experimental protocol hooks:
+    - Curriculum: phase A hand-only encodings, then shoe-aware phase B.
+    - Warm-start: clone the rule baseline before RL (hand-only when curriculum
+      or ``force_shoe_off`` is active).
+    - Learning curves: optional CSV of greedy eval metrics at print intervals.
+    - ``force_shoe_off``: keep shoe features disabled for the entire run
+      (ablation B).
     """
+    from agents.learning_curves import LearningCurveLogger
+    from agents.warmstart import warmstart_from_rule_agent
+
     use_curriculum = (
         NEURAL_CURRICULUM_ENABLED if curriculum is None else curriculum
     )
@@ -178,21 +193,57 @@ def run_neural_training_loop(
         if phase_a_episodes is None
         else phase_a_episodes
     )
-    if not use_curriculum:
+    if not use_curriculum or force_shoe_off:
         phase_a = 0
 
     phase_a = max(0, min(phase_a, num_episodes))
-    agent.use_shoe_features = phase_a == 0
-    if use_curriculum and phase_a > 0:
+    if force_shoe_off:
+        agent.use_shoe_features = False
+    else:
+        agent.use_shoe_features = phase_a == 0
+
+    use_warmstart = (
+        NEURAL_WARMSTART_ENABLED if warmstart is None else warmstart
+    )
+    clone_episodes = (
+        NEURAL_WARMSTART_EPISODES
+        if warmstart_episodes is None
+        else warmstart_episodes
+    )
+    if use_warmstart and clone_episodes > 0:
+        # Match phase-A / hand-only encoding during cloning.
+        if force_shoe_off or phase_a > 0:
+            agent.use_shoe_features = False
+        warmstart_from_rule_agent(agent, game, clone_episodes)
+        if force_shoe_off:
+            agent.use_shoe_features = False
+        elif phase_a > 0:
+            agent.use_shoe_features = False
+        else:
+            agent.use_shoe_features = True
+
+    if use_curriculum and phase_a > 0 and not force_shoe_off:
         print(
             f"Curriculum phase A: hand features only "
             f"(episodes 1–{phase_a})"
         )
+    if force_shoe_off:
+        print("Ablation: shoe features forced off for entire run")
+
+    curve_logger = None
+    log_curves = NEURAL_LEARNING_CURVE_ENABLED
+    if learning_curve_path is not None and log_curves:
+        curve_logger = LearningCurveLogger(learning_curve_path)
 
     total_training_reward = 0.0
 
     for episode in range(1, num_episodes + 1):
-        if use_curriculum and phase_a > 0 and episode == phase_a + 1:
+        if (
+            use_curriculum
+            and phase_a > 0
+            and not force_shoe_off
+            and episode == phase_a + 1
+        ):
             agent.use_shoe_features = True
             clear_replay_buffer(agent)
             print(
@@ -220,6 +271,15 @@ def run_neural_training_loop(
             print("Evaluation distribution:")
             print_distribution(eval_distribution)
             print()
+
+            if curve_logger is not None:
+                curve_logger.append(
+                    episode=episode,
+                    training_steps=agent.training_steps,
+                    eval_reward=eval_reward,
+                    epsilon=agent.epsilon,
+                    shoe_features_on=bool(agent.use_shoe_features),
+                )
 
     return agent
 

@@ -110,6 +110,7 @@ def test_curriculum_enables_shoe_features_and_clears_replay(monkeypatch):
         print_interval=100,
         curriculum=True,
         phase_a_episodes=2,
+        warmstart=False,
     )
 
     assert agent.use_shoe_features is True
@@ -132,6 +133,7 @@ def test_no_curriculum_keeps_shoe_features_from_start(monkeypatch):
         num_episodes=3,
         print_interval=100,
         curriculum=False,
+        warmstart=False,
     )
 
     assert agent.use_shoe_features is True
