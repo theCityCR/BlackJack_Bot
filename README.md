@@ -4,18 +4,19 @@ Finite-shoe Blackjack as a controlled RL benchmark: does richer shoe composition
 
 **Read the study:** [docs/paper.md](docs/paper.md)
 
-## Result (legacy preview)
+## Result
 
-Under an earlier unequal training budget, the rule baseline (~**−1.0%** EV) beat all published neural checkpoints. Equalized curriculum / warm-start / ablation tooling is in-repo; retrain to refresh the table.
+Under a **shared 200k-episode Double DQN protocol**, hand-only training (−0.0325) beats full shoe-from-scratch (−0.0877); curriculum + warm-start (−0.0513) lands in between. The rule baseline remains ahead (−0.0103). Details: [docs/paper.md](docs/paper.md) §5.2.
 
-| Agent | Avg reward |
+| Condition | Avg reward |
 |---|---:|
 | Rule-based baseline | **−0.0103** |
-| Double DQN (legacy) | −0.0594 |
-| Dueling + PER (legacy) | −0.0883 |
-| Dueling DQN (legacy) | −0.1109 |
+| Hand-only (equalized) | −0.0325 |
+| Curriculum + warm-start | −0.0513 |
+| Curriculum | −0.0654 |
+| Full shoe from scratch | −0.0877 |
 
-![Legacy comparison](docs/results/benchmark_results.svg)
+![Ablation learning curves](docs/results/ablation_learning_curves.svg)
 
 ## Quick start
 

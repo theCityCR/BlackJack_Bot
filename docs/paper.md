@@ -4,7 +4,7 @@
 
 ## Abstract
 
-We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a basic-strategy-inspired rule baseline. Under an earlier unequal training budget, no neural checkpoint beat the rule agent (~−1.0% EV). We then fix a shared experimental protocol—equal episodes and optimizer schedules, a hand-then-shoe state curriculum, optional rule-policy warm-start, learning-curve logging, and a Double DQN ablation suite—so architecture and state-design effects can be isolated. Published legacy numbers remain below the baseline; equalized and ablation results are produced by the tooling in this repository and should be filled in after a full retrain.
+We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a basic-strategy-inspired rule baseline (~−1.0% EV). Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
 
 ## 1. Introduction
 
@@ -73,8 +73,7 @@ Runner: `scripts/run_ablation_double_dqn.py` (supports `--smoke`).
 ## 4. Experiments
 
 - **Legacy architecture table:** 25,000 seeded eval rounds (seed 42) on checkpoints trained under unequal budgets (see training-step column).
-- **Equalized protocol:** retrain neural agents with shared defaults; compare greedy `average_reward` and learning curves.
-- **Ablation:** Double DQN conditions A–D; machine-readable JSON under `agents/double_q_network_learning/results/ablation/`.
+- **Ablation:** Double DQN conditions A–D under the shared protocol (200k train / 25k eval, seed 42); results in [`docs/results/ablation_results.json`](results/ablation_results.json).
 
 Primary metric: **expected units per round** under flat betting. Win/loss/draw rates use the sign of net round reward.
 
@@ -95,26 +94,37 @@ These numbers are **not** from the equalized protocol. They remain useful as a n
 
 Raw artifacts: [CSV](results/benchmark_results.csv), [JSON](results/benchmark_results.json).
 
-### 5.2 Equalized protocol and ablations
+### 5.2 Equalized Double DQN ablations
 
-*Pending full retrain.* After running the shared trainers and/or:
+Double DQN trained for **200,000** episodes per condition under the shared `NEURAL_*` hyperparameters (seed 42). Final greedy evaluation: **25,000** rounds. Rule baseline row is the same seeded eval as §5.1 for reference.
+
+| Condition | Avg reward | Win rate | Loss rate | Draw rate | Training steps |
+|---|---:|---:|---:|---:|---:|
+| Rule baseline (reference) | **−0.0103** | **43.11%** | **48.13%** | 8.76% | — |
+| B. Hand-only | **−0.0325** | 41.98% | 48.71% | 9.31% | 758,860 |
+| D. Curriculum + warm-start | −0.0513 | 42.32% | 49.45% | 8.24% | 763,278 |
+| C. Curriculum | −0.0654 | 41.76% | 49.92% | 8.32% | 756,260 |
+| A. Full from scratch | −0.0877 | 41.20% | 50.16% | 8.64% | 759,120 |
+
+![Equalized ablation learning curves](results/ablation_learning_curves.svg)
+
+Artifacts: [JSON](results/ablation_results.json), per-condition curves under [`results/ablation/`](results/ablation/).
+
+**Takeaway.** With compute held fixed, exposing shoe counts from episode 1 (A) is the weakest setting. Restricting to hand features (B) closes most of the gap toward the rule agent. Curriculum (C) and curriculum + warm-start (D) beat full scratch but do not beat hand-only under this budget—suggesting composition features remain hard to exploit even when staged.
+
+Reproduce:
 
 ```bash
-python3 scripts/run_ablation_double_dqn.py --seed 42
-python3 scripts/plot_learning_curves.py agents/*/*/learning_curve.csv --output docs/results/learning_curves.svg
-```
-
-replace this subsection with the new table and curve figure. Smoke validation:
-
-```bash
-python3 scripts/run_ablation_double_dqn.py --smoke --conditions A_full_scratch
+python3 scripts/run_ablation_double_dqn.py --seed 42 --episodes 200000 --eval-episodes 25000
+python3 scripts/plot_learning_curves.py docs/results/ablation/*/learning_curve.csv \
+  --output docs/results/ablation_learning_curves.svg
 ```
 
 ## 6. Discussion
 
-The legacy result supports the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; without curriculum or a strong prior (rule warm-start), networks can underfit relative to a compact heuristic.
+Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin. Curriculum and rule warm-start help relative to A, but under a 200k-episode budget the best learned policy remains hand-only—still short of the rule baseline (~−1.0% vs −3.3% EV).
 
-**Limitations.** Flat betting only; no insurance/surrender; rule baseline is not a perfect chart; published neural numbers use an obsolete budget. Positive EV vs the house would require bet variation (and typically counting), which is future work—not the claim of this study.
+**Limitations.** Flat betting only; no insurance/surrender; rule baseline is not a perfect chart; a single seed and one architecture for the ablation table. Positive EV vs the house would require bet variation (and typically counting), which is future work—not the claim of this study.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
