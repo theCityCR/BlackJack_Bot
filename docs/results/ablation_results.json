@@ -1,0 +1,85 @@
+{
+  "seed": 42,
+  "smoke": false,
+  "protocol": {
+    "training_episodes": 200000,
+    "eval_episodes": 25000,
+    "architecture": "Double DQN",
+    "shared_hyperparameters": "config.py NEURAL_* defaults"
+  },
+  "rule_baseline_reference": {
+    "source": "docs/results/benchmark_results.json",
+    "average_reward": -0.01034,
+    "win_rate": 0.43108,
+    "loss_rate": 0.48132,
+    "draw_rate": 0.0876,
+    "episodes": 25000,
+    "seed": 42
+  },
+  "conditions": [
+    {
+      "condition_id": "A_full_scratch",
+      "label": "Full from scratch",
+      "average_reward": -0.08768,
+      "training_steps": 759120,
+      "win_rate": 0.41196,
+      "loss_rate": 0.50164,
+      "draw_rate": 0.0864,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "learning_curve_path": "docs/results/ablation/A_full_scratch/learning_curve.csv"
+    },
+    {
+      "condition_id": "B_hand_only",
+      "label": "Hand-only",
+      "average_reward": -0.03252,
+      "training_steps": 758860,
+      "win_rate": 0.4198,
+      "loss_rate": 0.48712,
+      "draw_rate": 0.09308,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": true,
+      "learning_curve_path": "docs/results/ablation/B_hand_only/learning_curve.csv"
+    },
+    {
+      "condition_id": "C_curriculum",
+      "label": "Curriculum",
+      "average_reward": -0.06538,
+      "training_steps": 756260,
+      "win_rate": 0.41756,
+      "loss_rate": 0.4992,
+      "draw_rate": 0.08324,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": true,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "learning_curve_path": "docs/results/ablation/C_curriculum/learning_curve.csv"
+    },
+    {
+      "condition_id": "D_curriculum_warmstart",
+      "label": "Curriculum + warm-start",
+      "average_reward": -0.05126,
+      "training_steps": 763278,
+      "win_rate": 0.42316,
+      "loss_rate": 0.49448,
+      "draw_rate": 0.08236,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": true,
+      "warmstart": true,
+      "force_shoe_off": false,
+      "learning_curve_path": "docs/results/ablation/D_curriculum_warmstart/learning_curve.csv"
+    }
+  ]
+}
