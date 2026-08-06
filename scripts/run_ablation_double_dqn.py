@@ -10,19 +10,14 @@ from pathlib import Path
 from typing import Any
 
 from agents.common import (
+    agent_results_path,
     evaluate_greedy,
     neural_training_kwargs,
-    package_results_path,
     run_neural_training_loop,
     save_torch_checkpoint,
     set_seed,
 )
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
-from agents.double_q_network_learning.train_double_q_network_learning_agent import (
-    __file__ as DOUBLE_DQN_TRAIN_FILE,
-)
+from agents.double_dqn import DoubleQNetworkLearningAgent
 from agents.study_protocol import ABLATION_CONDITIONS
 from config import (
     NEURAL_FINAL_EVAL_EPISODES,
@@ -46,7 +41,7 @@ LOSS_CATEGORIES = frozenset(
 
 def ablation_base_dir() -> Path:
     """Directory for per-condition artifacts and the summary JSON."""
-    return package_results_path(DOUBLE_DQN_TRAIN_FILE, "ablation")
+    return agent_results_path("double_dqn", "ablation")
 
 
 def default_output_path() -> Path:

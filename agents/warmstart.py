@@ -1,25 +1,16 @@
 """Behavior cloning warm-start from the rule-based baseline.
 
-Contract (Wave 1):
-    warmstart_from_rule_agent(agent, game, num_episodes) -> None
-
-- Drive episodes with RuleAgent.choose_action (legal actions only).
-- Store transitions via agent.remember(...) using the same hand-reward
-  attribution pattern as train_one_episode.
-- Call agent.train_step() when the replay buffer is large enough.
-- Do not decay epsilon during warm-start; leave epsilon at its start value
-  for the subsequent RL phase (or set epsilon to epsilon_min after cloning
-  only if documented—prefer leaving epsilon high and filling the buffer).
-- Respect agent.use_shoe_features when encoding (caller sets hand-only when
-  curriculum is enabled).
-- Print a one-line summary when finished.
+Drive episodes with RuleAgent, store transitions via agent.remember using
+per-hand reward attribution, and call train_step when the buffer is ready.
+Does not decay epsilon during warm-start.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.episode import attribute_hand_transitions
+from agents.rule import RuleAgent
 
 
 def warmstart_from_rule_agent(
@@ -53,45 +44,16 @@ def warmstart_from_rule_agent(
                     "state": state,
                     "action": action,
                     "next_state": next_state,
-                    "done": done,
                     "next_available_actions": next_available_actions,
                 }
             )
-
             state = next_state
 
-        hand_rewards = game.hand_rewards
-
-        for i, transition in enumerate(transitions):
-            hand_index = transition["hand_index"]
-            hand_reward = hand_rewards[hand_index]
-
-            is_last = i == len(transitions) - 1
-            next_is_different_hand = (
-                not is_last
-                and transitions[i + 1]["hand_index"] != hand_index
-            )
-
-            terminal_for_this_hand = is_last or next_is_different_hand
-
-            if terminal_for_this_hand:
-                agent.remember(
-                    transition["state"],
-                    transition["action"],
-                    hand_reward,
-                    None,
-                    True,
-                    None,
-                )
-            else:
-                agent.remember(
-                    transition["state"],
-                    transition["action"],
-                    0.0,
-                    transition["next_state"],
-                    False,
-                    transition["next_available_actions"],
-                )
+        attribute_hand_transitions(
+            transitions,
+            game.hand_rewards,
+            agent.remember,
+        )
 
         if len(agent.replay_buffer) >= agent.min_replay_size:
             agent.train_step()

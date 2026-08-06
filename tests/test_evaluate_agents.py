@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.rule import RuleAgent
 from evaluate_agents import (
     DOCS_RESULTS_DIR,
     DEFAULT_OUTPUT_DIR,
@@ -12,7 +12,6 @@ from evaluate_agents import (
     guard_docs_publish,
     write_results,
 )
-
 
 def test_evaluation_is_reproducible():
     first = evaluate_agent("rule", RuleAgent(), episodes=100, seed=7)
@@ -22,16 +21,13 @@ def test_evaluation_is_reproducible():
     assert first["episodes"] == 100
     assert first["win_rate"] + first["loss_rate"] + first["draw_rate"] == 1.0
 
-
 def test_default_output_dir_is_not_docs_results():
     assert DEFAULT_OUTPUT_DIR.resolve() != DOCS_RESULTS_DIR.resolve()
     assert DEFAULT_OUTPUT_DIR.name == "eval"
 
-
 def test_guard_docs_publish_blocks_incomplete_overwrite():
     with pytest.raises(SystemExit, match="Refusing to overwrite docs/results"):
         guard_docs_publish(DOCS_RESULTS_DIR, {"Rule-based baseline"})
-
 
 def test_guard_docs_publish_allows_complete_set():
     guard_docs_publish(
@@ -43,7 +39,6 @@ def test_guard_docs_publish_allows_complete_set():
             "Dueling Double DQN + PER",
         },
     )
-
 
 def test_write_results_creates_artifacts(tmp_path: Path):
     results = [

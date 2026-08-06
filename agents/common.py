@@ -360,6 +360,15 @@ def save_torch_checkpoint(agent: Any, path: Path | str) -> Path:
     return checkpoint_path
 
 
+def agent_results_path(agent_name: str, filename: str) -> Path:
+    """Resolve agents/results/<agent_name>/<filename>."""
+    root = Path(__file__).resolve().parent / "results" / agent_name
+    return root / filename
+
+
 def package_results_path(package_file: str, filename: str) -> Path:
-    """Resolve agents/<pkg>/results/<filename> from a module __file__."""
+    """Deprecated: resolve results next to a module file.
+
+    Prefer :func:`agent_results_path` for flattened agent modules.
+    """
     return Path(package_file).resolve().parent / "results" / filename

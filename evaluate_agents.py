@@ -11,16 +11,13 @@ from typing import Any
 
 import torch
 
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
-from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
-from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    PrioritizedDuelingDQNAgent,
-)
-from agents.q_learning_simple.q_learning_agent import QLearningAgent
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.dqn import DeepQLearningAgent
+from agents.double_dqn import DoubleQNetworkLearningAgent
+from agents.dueling import DuelingDQNAgent
+from agents.prioritized import PrioritizedDuelingDQNAgent
+from agents.tabular_q import QLearningAgent
+from agents.rule import RuleAgent
+from agents.common import agent_results_path
 from game import BlackjackGame
 
 
@@ -36,27 +33,23 @@ PUBLISHED_NEURAL_AGENTS = {
 TORCH_CHECKPOINTS: dict[str, tuple[type, Path]] = {
     "DQN": (
         DeepQLearningAgent,
-        PROJECT_ROOT / "agents/deep_q_learning/results/deep_q_learning_model.pt",
+        agent_results_path("dqn", "deep_q_learning_model.pt"),
     ),
     "Double DQN": (
         DoubleQNetworkLearningAgent,
-        PROJECT_ROOT
-        / "agents/double_q_network_learning/results/double_q_network_model.pt",
+        agent_results_path("double_dqn", "double_q_network_model.pt"),
     ),
     "Dueling Double DQN": (
         DuelingDQNAgent,
-        PROJECT_ROOT / "agents/dueling_dqn/results/dueling_dqn_model.pt",
+        agent_results_path("dueling", "dueling_dqn_model.pt"),
     ),
     "Dueling Double DQN + PER": (
         PrioritizedDuelingDQNAgent,
-        PROJECT_ROOT
-        / "agents/prioritized_replay/results/dueling_dqn_prioritized_model.pt",
+        agent_results_path("prioritized", "dueling_dqn_prioritized_model.pt"),
     ),
 }
 
-Q_TABLE_PATH = (
-    PROJECT_ROOT / "agents/q_learning_simple/results/q_table.json"
-)
+Q_TABLE_PATH = agent_results_path("tabular_q", "q_table.json")
 
 
 def load_torch_agent(agent_class, checkpoint_path: Path):

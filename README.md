@@ -31,7 +31,7 @@ python3 main.py --episodes 1000 --seed 42
 Train / ablate / plot (details in the study):
 
 ```bash
-python3 -m agents.double_q_network_learning.train_double_q_network_learning_agent --seed 42
+python3 -m agents.train_double_dqn --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
@@ -43,9 +43,10 @@ Neural agents run on **CUDA when available, otherwise CPU**. Apple **MPS** is su
 ```text
 docs/paper.md           # Study writeup (start here)
 docs/results/           # Published legacy benchmarks
-agents/                 # Rule, tabular, and neural agents + study protocol
+AGENTS.md               # Map for coding agents
+agents/                 # Flat agents + shared neural infra + study protocol
+config/                 # rules / protocol / tabular knobs
 scripts/                # Ablation runner + learning-curve plots
-config.py               # Rules and shared experimental protocol
 evaluate_agents.py      # Seeded evaluation
 ```
 

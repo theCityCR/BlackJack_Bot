@@ -1,137 +1,10 @@
 import pytest
 import torch
 
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    ACTION_LIST,
-    ACTION_TO_INDEX,
-    DoubleQNetworkLearningAgent,
-    Transition,
-)
-from config import NUM_DECKS
-from game import Action, GameState
-
-
-def make_state(
-    player_value=16,
-    dealer_upcard=10,
-    usable_ace=False,
-    can_double=True,
-    can_split=False,
-    is_split_hand=False,
-    active_hand_index=0,
-    num_hands=1,
-    count_vector=(4, 4, 4, 4, 4, 4, 4, 4, 4, 16),
-):
-    return GameState(
-        player_value=player_value,
-        dealer_upcard=dealer_upcard,
-        usable_ace=usable_ace,
-        can_double=can_double,
-        can_split=can_split,
-        is_split_hand=is_split_hand,
-        active_hand_index=active_hand_index,
-        num_hands=num_hands,
-        count_vector=count_vector,
-    )
-
-
-def test_action_list_order_matches_action_indices():
-    assert ACTION_LIST == [
-        Action.HIT,
-        Action.STAND,
-        Action.DOUBLE,
-        Action.SPLIT,
-    ]
-
-    assert ACTION_TO_INDEX[Action.HIT] == 0
-    assert ACTION_TO_INDEX[Action.STAND] == 1
-    assert ACTION_TO_INDEX[Action.DOUBLE] == 2
-    assert ACTION_TO_INDEX[Action.SPLIT] == 3
-
-
-def test_encode_state_returns_19_features():
-    agent = DoubleQNetworkLearningAgent()
-    state = make_state()
-
-    encoded = agent.encode_state(state)
-
-    assert isinstance(encoded, torch.Tensor)
-    assert encoded.shape == torch.Size([19])
-
-
-def test_encode_state_normalizes_basic_features():
-    agent = DoubleQNetworkLearningAgent()
-    state = make_state(
-        player_value=21,
-        dealer_upcard=10,
-        usable_ace=True,
-        can_double=True,
-        can_split=True,
-        is_split_hand=True,
-        active_hand_index=2,
-        num_hands=4,
-    )
-
-    encoded = agent.encode_state(state)
-
-    assert encoded[0].item() == pytest.approx(1.0)
-    assert encoded[1].item() == pytest.approx(1.0)
-    assert encoded[2].item() == pytest.approx(1.0)
-    assert encoded[3].item() == pytest.approx(1.0)
-    assert encoded[4].item() == pytest.approx(1.0)
-    assert encoded[5].item() == pytest.approx(1.0)
-    assert encoded[6].item() == pytest.approx(0.5)
-    assert encoded[7].item() == pytest.approx(1.0)
-
-
-def test_encode_state_stores_cards_remaining_fraction():
-    agent = DoubleQNetworkLearningAgent()
-
-    state = make_state(
-        count_vector=(2, 2, 2, 2, 2, 2, 2, 2, 2, 8),
-    )
-
-    encoded = agent.encode_state(state)
-
-    cards_remaining = sum(state.count_vector)
-    expected_fraction = cards_remaining / (52 * NUM_DECKS)
-
-    assert encoded[8].item() == pytest.approx(expected_fraction)
-
-
-def test_encode_state_normalizes_count_vector_by_cards_remaining():
-    agent = DoubleQNetworkLearningAgent()
-
-    state = make_state(
-        count_vector=(2, 2, 2, 2, 2, 2, 2, 2, 2, 8),
-    )
-
-    encoded = agent.encode_state(state)
-
-    normalized_counts = encoded[9:].tolist()
-    cards_remaining = sum(state.count_vector)
-
-    expected = [
-        count / cards_remaining
-        for count in state.count_vector
-    ]
-
-    assert normalized_counts == pytest.approx(expected)
-    assert sum(normalized_counts) == pytest.approx(1.0)
-
-
-def test_encode_state_handles_empty_count_vector():
-    agent = DoubleQNetworkLearningAgent()
-
-    state = make_state(
-        count_vector=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    )
-
-    encoded = agent.encode_state(state)
-
-    assert encoded[8].item() == pytest.approx(0.0)
-    assert encoded[9:].tolist() == pytest.approx([0.0] * 10)
-
+from agents.common import ACTION_TO_INDEX, Transition
+from agents.double_dqn import DoubleQNetworkLearningAgent
+from conftest import make_state
+from game import Action
 
 def test_legal_action_indices_returns_correct_indices():
     agent = DoubleQNetworkLearningAgent()
@@ -144,7 +17,6 @@ def test_legal_action_indices_returns_correct_indices():
 
     assert indices == [0, 2, 3]
 
-
 def test_choose_action_with_epsilon_one_returns_legal_action():
     agent = DoubleQNetworkLearningAgent(epsilon=1.0)
     state = make_state()
@@ -153,7 +25,6 @@ def test_choose_action_with_epsilon_one_returns_legal_action():
 
     for _ in range(20):
         assert agent.choose_action(state, available_actions) == Action.STAND
-
 
 def test_best_action_only_returns_legal_action_even_if_illegal_q_is_high():
     agent = DoubleQNetworkLearningAgent(epsilon=0.0)
@@ -172,7 +43,6 @@ def test_best_action_only_returns_legal_action_even_if_illegal_q_is_high():
 
     assert agent.best_action(state, available_actions) in available_actions
     assert agent.best_action(state, available_actions) != Action.SPLIT
-
 
 def test_remember_adds_encoded_transition_to_replay_buffer():
     agent = DoubleQNetworkLearningAgent()
@@ -204,7 +74,6 @@ def test_remember_adds_encoded_transition_to_replay_buffer():
         ACTION_TO_INDEX[Action.STAND],
     ]
 
-
 def test_remember_handles_terminal_transition():
     agent = DoubleQNetworkLearningAgent()
     state = make_state()
@@ -224,7 +93,6 @@ def test_remember_handles_terminal_transition():
     assert transition.done is True
     assert transition.next_legal_action_indices == []
 
-
 def test_train_step_does_nothing_when_replay_buffer_too_small():
     agent = DoubleQNetworkLearningAgent(batch_size=4)
 
@@ -242,7 +110,6 @@ def test_train_step_does_nothing_when_replay_buffer_too_small():
     agent.train_step()
 
     assert agent.training_steps == old_training_steps
-
 
 def test_train_step_updates_training_steps_when_enough_samples():
     agent = DoubleQNetworkLearningAgent(
@@ -264,7 +131,6 @@ def test_train_step_updates_training_steps_when_enough_samples():
 
     assert agent.training_steps == 1
 
-
 def test_decay_epsilon_respects_minimum():
     agent = DoubleQNetworkLearningAgent(
         epsilon=0.06,
@@ -275,7 +141,6 @@ def test_decay_epsilon_respects_minimum():
     agent.decay_epsilon()
 
     assert agent.epsilon == pytest.approx(0.05)
-
 
 def test_model_output_has_one_q_value_per_action():
     agent = DoubleQNetworkLearningAgent()

@@ -1,29 +1,9 @@
 import torch
 
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent, ACTION_LIST
+from agents.common import ACTION_LIST
+from agents.dqn import DeepQLearningAgent
+from conftest import make_state
 from game import Action, BlackjackGame, GameState
-
-
-def test_encode_state_returns_tensor_of_size_19():
-    agent = DeepQLearningAgent()
-
-    state = GameState(
-        player_value=16,
-        dealer_upcard=10,
-        usable_ace=False,
-        can_double=True,
-        can_split=False,
-        is_split_hand=False,
-        active_hand_index=0,
-        num_hands=1,
-    )
-
-    encoded = agent.encode_state(state)
-
-    assert isinstance(encoded, torch.Tensor)
-    assert encoded.shape == (19,)
-    assert encoded.dtype == torch.float32
-
 
 def test_choose_action_returns_legal_action_only():
     agent = DeepQLearningAgent(epsilon=1.0)
@@ -44,7 +24,6 @@ def test_choose_action_returns_legal_action_only():
     for _ in range(100):
         action = agent.choose_action(state, legal_actions)
         assert action in legal_actions
-
 
 def test_best_action_respects_legal_action_mask():
     agent = DeepQLearningAgent(epsilon=0.0)
@@ -74,7 +53,6 @@ def test_best_action_respects_legal_action_mask():
     action = agent.best_action(state, [Action.HIT, Action.STAND])
 
     assert action == Action.STAND
-
 
 def test_remember_adds_transition_to_replay_buffer():
     agent = DeepQLearningAgent()
@@ -118,7 +96,6 @@ def test_remember_adds_transition_to_replay_buffer():
     assert transition.done is False
     assert transition.next_state is not None
 
-
 def test_train_step_runs_when_replay_buffer_has_enough_samples():
     agent = DeepQLearningAgent(batch_size=4)
 
@@ -159,7 +136,6 @@ def test_train_step_runs_when_replay_buffer_has_enough_samples():
 
     assert agent.training_steps == old_steps + 1
 
-
 def test_train_one_episode_runs_without_crashing():
     agent = DeepQLearningAgent(batch_size=4)
     game = BlackjackGame()
@@ -167,7 +143,6 @@ def test_train_one_episode_runs_without_crashing():
     reward = agent.train_one_episode(game)
 
     assert isinstance(reward, float)
-
 
 def test_play_episode_runs_without_learning():
     agent = DeepQLearningAgent(epsilon=0.0)
@@ -178,7 +153,6 @@ def test_play_episode_runs_without_learning():
 
     assert isinstance(reward, float)
     assert agent.training_steps == old_steps
-
 
 def test_epsilon_decays_but_not_below_minimum():
     agent = DeepQLearningAgent(

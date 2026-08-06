@@ -16,20 +16,15 @@ import sys
 from pathlib import Path
 
 from agents.common import (
+    agent_results_path,
     evaluate_greedy,
     neural_training_kwargs,
-    package_results_path,
     run_neural_training_loop,
     save_torch_checkpoint,
     set_seed,
 )
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
-from agents.double_q_network_learning.train_double_q_network_learning_agent import (
-    __file__ as DOUBLE_DQN_TRAIN_FILE,
-)
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.double_dqn import DoubleQNetworkLearningAgent
+from agents.rule import RuleAgent
 from config import (
     GAP_CLOSE_CHECKPOINT_EVAL_EPISODES,
     GAP_CLOSE_EPSILON_MIN,
@@ -41,7 +36,7 @@ from config import (
 )
 from game import BlackjackGame
 
-RESULTS_DIR = package_results_path(DOUBLE_DQN_TRAIN_FILE, "gap_close")
+RESULTS_DIR = agent_results_path("double_dqn", "gap_close")
 
 
 def run_gap_close(

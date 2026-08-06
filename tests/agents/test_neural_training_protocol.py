@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from agents.common import neural_training_kwargs
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
-from agents.dueling_dqn.dueling_dqn_agent import DuelingDQNAgent
-from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    PrioritizedDuelingDQNAgent,
-)
+from agents.dqn import DeepQLearningAgent
+from agents.double_dqn import DoubleQNetworkLearningAgent
+from agents.dueling import DuelingDQNAgent
+from agents.prioritized import PrioritizedDuelingDQNAgent
 from config import (
     NEURAL_BATCH_SIZE,
     NEURAL_EPSILON_DECAY,
@@ -20,7 +16,6 @@ from config import (
     NEURAL_TRAIN_UPDATES_PER_EPISODE,
     NEURAL_TRAINING_EPISODES,
 )
-
 
 def test_neural_training_kwargs_match_config():
     kwargs = neural_training_kwargs()
@@ -32,7 +27,6 @@ def test_neural_training_kwargs_match_config():
     assert kwargs["train_updates_per_episode"] == NEURAL_TRAIN_UPDATES_PER_EPISODE
     assert kwargs["train_updates_per_episode"] == 2
     assert kwargs["epsilon_decay"] == 0.99997
-
 
 def test_neural_agents_share_default_training_hyperparameters():
     agents = [
@@ -61,7 +55,6 @@ def test_neural_agents_share_default_training_hyperparameters():
             == reference.train_updates_per_episode
             == NEURAL_TRAIN_UPDATES_PER_EPISODE
         )
-
 
 def test_neural_training_episode_budget_is_shared():
     assert NEURAL_TRAINING_EPISODES == 200_000

@@ -1,36 +1,10 @@
 import torch
 
-from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    ACTION_TO_INDEX,
-    PrioritizedDuelingDQNAgent,
-    PrioritizedReplayBuffer,
-    Transition,
-)
+from agents.common import ACTION_TO_INDEX, Transition
+from agents.prioritized import PrioritizedDuelingDQNAgent
+from agents.replay import PrioritizedReplayBuffer
 from game import Action, BlackjackGame, GameState
-
-
-def make_state(
-    player_value=16,
-    dealer_upcard=10,
-    usable_ace=False,
-    can_double=True,
-    can_split=False,
-    is_split_hand=False,
-    active_hand_index=0,
-    num_hands=1,
-):
-    return GameState(
-        player_value=player_value,
-        dealer_upcard=dealer_upcard,
-        usable_ace=usable_ace,
-        can_double=can_double,
-        can_split=can_split,
-        is_split_hand=is_split_hand,
-        active_hand_index=active_hand_index,
-        num_hands=num_hands,
-        count_vector=(8, 8, 8, 8, 8, 8, 8, 8, 8, 32),
-    )
-
+from conftest import make_state
 
 def make_transition(reward=0.0, done=False):
     state = torch.zeros(19, dtype=torch.float32)
@@ -48,7 +22,6 @@ def make_transition(reward=0.0, done=False):
         ],
     )
 
-
 def test_prioritized_replay_buffer_adds_transitions():
     buffer = PrioritizedReplayBuffer(capacity=3)
 
@@ -59,7 +32,6 @@ def test_prioritized_replay_buffer_adds_transitions():
     assert len(buffer) == 3
     assert len(buffer.buffer) == 3
     assert len(buffer.priorities) == 3
-
 
 def test_prioritized_replay_buffer_overwrites_old_transitions():
     buffer = PrioritizedReplayBuffer(capacity=2)
@@ -74,7 +46,6 @@ def test_prioritized_replay_buffer_overwrites_old_transitions():
     assert 3.0 in rewards
     assert 1.0 not in rewards
 
-
 def test_prioritized_replay_buffer_sample_returns_correct_shapes():
     buffer = PrioritizedReplayBuffer(capacity=10)
 
@@ -88,7 +59,6 @@ def test_prioritized_replay_buffer_sample_returns_correct_shapes():
     assert weights.shape == (4,)
     assert torch.all(weights > 0)
     assert torch.all(weights <= 1)
-
 
 def test_prioritized_replay_buffer_updates_priorities():
     buffer = PrioritizedReplayBuffer(capacity=5)
@@ -105,7 +75,6 @@ def test_prioritized_replay_buffer_updates_priorities():
 
     assert buffer.priorities[0] > old_priority
 
-
 def test_agent_encodes_state_to_expected_size():
     agent = PrioritizedDuelingDQNAgent(device="cpu")
     state = make_state()
@@ -114,7 +83,6 @@ def test_agent_encodes_state_to_expected_size():
 
     assert encoded.shape == (19,)
     assert encoded.dtype == torch.float32
-
 
 def test_agent_legal_action_indices_are_correct():
     agent = PrioritizedDuelingDQNAgent(device="cpu")
@@ -131,7 +99,6 @@ def test_agent_legal_action_indices_are_correct():
         ACTION_TO_INDEX[Action.DOUBLE],
     ]
 
-
 def test_agent_choose_action_returns_legal_action_with_full_exploration():
     agent = PrioritizedDuelingDQNAgent(
         epsilon=1.0,
@@ -145,7 +112,6 @@ def test_agent_choose_action_returns_legal_action_with_full_exploration():
         action = agent.choose_action(state, available_actions)
         assert action in available_actions
 
-
 def test_agent_best_action_returns_legal_action():
     agent = PrioritizedDuelingDQNAgent(
         epsilon=0.0,
@@ -158,7 +124,6 @@ def test_agent_best_action_returns_legal_action():
     action = agent.best_action(state, available_actions)
 
     assert action in available_actions
-
 
 def test_agent_remember_adds_transition_to_prioritized_buffer():
     agent = PrioritizedDuelingDQNAgent(device="cpu")
@@ -188,7 +153,6 @@ def test_agent_remember_adds_transition_to_prioritized_buffer():
         ACTION_TO_INDEX[Action.STAND],
     ]
 
-
 def test_agent_remember_terminal_transition():
     agent = PrioritizedDuelingDQNAgent(device="cpu")
 
@@ -211,7 +175,6 @@ def test_agent_remember_terminal_transition():
     assert stored.next_state is None
     assert stored.next_legal_action_indices == []
 
-
 def test_agent_train_step_does_nothing_when_buffer_too_small():
     agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
@@ -232,7 +195,6 @@ def test_agent_train_step_does_nothing_when_buffer_too_small():
     agent.train_step()
 
     assert agent.training_steps == old_training_steps
-
 
 def test_agent_train_step_updates_model_when_buffer_large_enough():
     agent = PrioritizedDuelingDQNAgent(
@@ -271,7 +233,6 @@ def test_agent_train_step_updates_model_when_buffer_large_enough():
         for old, new in zip(old_parameters, new_parameters)
     )
 
-
 def test_agent_train_step_updates_priorities():
     agent = PrioritizedDuelingDQNAgent(
         batch_size=4,
@@ -296,7 +257,6 @@ def test_agent_train_step_updates_priorities():
     new_priorities = agent.replay_buffer.priorities
 
     assert old_priorities != new_priorities
-
 
 def test_agent_target_model_updates_on_interval():
     agent = PrioritizedDuelingDQNAgent(
@@ -324,7 +284,6 @@ def test_agent_target_model_updates_on_interval():
     ):
         assert torch.allclose(model_parameter, target_parameter)
 
-
 def test_agent_decay_epsilon_respects_minimum():
     agent = PrioritizedDuelingDQNAgent(
         epsilon=0.06,
@@ -336,7 +295,6 @@ def test_agent_decay_epsilon_respects_minimum():
     agent.decay_epsilon()
 
     assert agent.epsilon == 0.05
-
 
 def test_agent_can_train_one_episode():
     agent = PrioritizedDuelingDQNAgent(
@@ -352,7 +310,6 @@ def test_agent_can_train_one_episode():
 
     assert isinstance(reward, float)
     assert len(agent.replay_buffer) >= 0
-
 
 def test_agent_can_play_one_episode_without_training():
     agent = PrioritizedDuelingDQNAgent(

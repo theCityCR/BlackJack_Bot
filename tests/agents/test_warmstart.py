@@ -1,8 +1,7 @@
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.dqn import DeepQLearningAgent
+from agents.rule import RuleAgent
 from agents.warmstart import warmstart_from_rule_agent
 from game import BlackjackGame
-
 
 def test_rule_agent_chooses_legal_actions_in_random_episodes():
     rule_agent = RuleAgent()
@@ -23,7 +22,6 @@ def test_rule_agent_chooses_legal_actions_in_random_episodes():
 
             state, _, done = game.step(action)
 
-
 def test_warmstart_fills_buffer_and_trains():
     agent = DeepQLearningAgent(
         batch_size=2,
@@ -36,7 +34,6 @@ def test_warmstart_fills_buffer_and_trains():
 
     assert len(agent.replay_buffer) > 0
     assert agent.training_steps > 0
-
 
 def test_warmstart_does_not_decay_epsilon():
     start_epsilon = 0.42
@@ -51,7 +48,6 @@ def test_warmstart_does_not_decay_epsilon():
     warmstart_from_rule_agent(agent, game, num_episodes=10)
 
     assert agent.epsilon == start_epsilon
-
 
 def test_warmstart_counts_episodes_when_reset_returns_none():
     agent = DeepQLearningAgent(

@@ -1,30 +1,8 @@
 import pytest
 
-from agents.q_learning_simple.q_learning_agent import QLearningAgent
+from agents.tabular_q import QLearningAgent
 from game import Action, GameState
-
-
-def make_state(
-    player_value=15,
-    dealer_upcard=10,
-    usable_ace=False,
-    can_double=False,
-    can_split=False,
-    is_split_hand=False,
-    active_hand_index=0,
-    num_hands=1,
-):
-    return GameState(
-        player_value=player_value,
-        dealer_upcard=dealer_upcard,
-        usable_ace=usable_ace,
-        can_double=can_double,
-        can_split=can_split,
-        is_split_hand=is_split_hand,
-        active_hand_index=active_hand_index,
-        num_hands=num_hands,
-    )
-
+from conftest import make_state
 
 def test_q_table_starts_with_zero_values_for_all_actions():
     agent = QLearningAgent()
@@ -36,7 +14,6 @@ def test_q_table_starts_with_zero_values_for_all_actions():
     assert values[Action.STAND] == 0.0
     assert values[Action.DOUBLE] == 0.0
     assert values[Action.SPLIT] == 0.0
-
 
 def test_best_action_returns_highest_q_value_among_legal_actions():
     agent = QLearningAgent()
@@ -55,7 +32,6 @@ def test_best_action_returns_highest_q_value_among_legal_actions():
 
     assert action == Action.DOUBLE
 
-
 def test_best_action_masks_illegal_actions_even_if_illegal_action_has_highest_q():
     agent = QLearningAgent()
     state = make_state(player_value=16, dealer_upcard=10)
@@ -73,7 +49,6 @@ def test_best_action_masks_illegal_actions_even_if_illegal_action_has_highest_q(
 
     assert action == Action.HIT
 
-
 def test_choose_action_with_epsilon_zero_uses_best_legal_action():
     agent = QLearningAgent(epsilon=0.0)
     state = make_state(player_value=16, dealer_upcard=10)
@@ -90,7 +65,6 @@ def test_choose_action_with_epsilon_zero_uses_best_legal_action():
 
     assert action == Action.STAND
 
-
 def test_choose_action_with_epsilon_one_only_explores_legal_actions():
     agent = QLearningAgent(epsilon=1.0)
     state = make_state(player_value=8, dealer_upcard=6, can_split=True)
@@ -100,7 +74,6 @@ def test_choose_action_with_epsilon_one_only_explores_legal_actions():
     for _ in range(100):
         action = agent.choose_action(state, available_actions=legal_actions)
         assert action in legal_actions
-
 
 def test_choose_action_can_select_double_when_double_is_legal():
     agent = QLearningAgent(epsilon=0.0)
@@ -118,7 +91,6 @@ def test_choose_action_can_select_double_when_double_is_legal():
 
     assert action == Action.DOUBLE
 
-
 def test_choose_action_can_select_split_when_split_is_legal():
     agent = QLearningAgent(epsilon=0.0)
     state = make_state(player_value=16, dealer_upcard=10, can_split=True)
@@ -134,7 +106,6 @@ def test_choose_action_can_select_split_when_split_is_legal():
     )
 
     assert action == Action.SPLIT
-
 
 def test_state_value_21_defaults_to_stand_when_available_actions_omitted():
     agent = QLearningAgent(epsilon=0.0)
@@ -153,7 +124,6 @@ def test_state_value_21_defaults_to_stand_when_available_actions_omitted():
 
     assert agent.best_action(state) == Action.STAND
 
-
 def test_learn_terminal_state_updates_toward_reward():
     agent = QLearningAgent(
         learning_rate=0.5,
@@ -171,7 +141,6 @@ def test_learn_terminal_state_updates_toward_reward():
     )
 
     assert agent.q_table[state.as_tuple()][Action.STAND] == pytest.approx(0.5)
-
 
 def test_learn_non_terminal_state_uses_best_legal_next_action_only():
     agent = QLearningAgent(
@@ -200,7 +169,6 @@ def test_learn_non_terminal_state_uses_best_legal_next_action_only():
 
     assert agent.q_table[state.as_tuple()][Action.HIT] == pytest.approx(0.4)
 
-
 def test_learn_non_terminal_requires_next_state():
     agent = QLearningAgent(epsilon=0.0)
     state = make_state(player_value=12, dealer_upcard=10)
@@ -213,7 +181,6 @@ def test_learn_non_terminal_requires_next_state():
             next_state=None,
             done=False,
         )
-
 
 def test_learn_does_not_decay_epsilon():
     agent = QLearningAgent(
@@ -236,7 +203,6 @@ def test_learn_does_not_decay_epsilon():
 
     assert agent.epsilon == pytest.approx(1.0)
 
-
 class ImmediateTerminalGame:
     def __init__(self):
         self.round_reward = -1.0
@@ -252,7 +218,6 @@ class ImmediateTerminalGame:
     def render(self):
         pass
 
-
 def test_train_one_episode_handles_reset_returning_none():
     agent = QLearningAgent(
         epsilon=1.0,
@@ -267,7 +232,6 @@ def test_train_one_episode_handles_reset_returning_none():
     assert game.step_called is False
     assert agent.epsilon == pytest.approx(0.5)
 
-
 def test_play_episode_handles_reset_returning_none():
     agent = QLearningAgent(epsilon=0.0)
     game = ImmediateTerminalGame()
@@ -276,7 +240,6 @@ def test_play_episode_handles_reset_returning_none():
 
     assert reward == pytest.approx(-1.0)
     assert game.step_called is False
-
 
 class FakeSplitRewardGame:
     """
@@ -328,7 +291,6 @@ class FakeSplitRewardGame:
 
         return None, self.round_reward, True
 
-
 def test_train_one_episode_uses_per_hand_rewards_for_split_hands():
     agent = QLearningAgent(
         learning_rate=1.0,
@@ -349,7 +311,6 @@ def test_train_one_episode_uses_per_hand_rewards_for_split_hands():
     assert q_hand_0 == pytest.approx(1.0)
     assert q_hand_1 == pytest.approx(-2.0)
 
-
 def test_train_one_episode_decays_epsilon_once():
     agent = QLearningAgent(
         learning_rate=1.0,
@@ -364,7 +325,6 @@ def test_train_one_episode_decays_epsilon_once():
     agent.train_one_episode(game)
 
     assert agent.epsilon == pytest.approx(0.5)
-
 
 def test_train_one_episode_epsilon_does_not_decay_below_minimum():
     agent = QLearningAgent(

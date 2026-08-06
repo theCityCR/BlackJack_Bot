@@ -15,32 +15,12 @@ from agents.common import (
     encode_state,
     run_neural_training_loop,
 )
-from agents.deep_q_learning.deep_q_learning_agent import DeepQLearningAgent
-from agents.prioritized_replay.dueling_dqn_prioritized_agent import (
-    PrioritizedReplayBuffer,
-)
-from game import GameState
-
-
-def make_state(**overrides) -> GameState:
-    values = {
-        "player_value": 16,
-        "dealer_upcard": 10,
-        "usable_ace": False,
-        "can_double": True,
-        "can_split": False,
-        "is_split_hand": False,
-        "active_hand_index": 0,
-        "num_hands": 1,
-        "count_vector": (2, 2, 2, 2, 2, 2, 2, 2, 2, 8),
-    }
-    values.update(overrides)
-    return GameState(**values)
-
+from agents.dqn import DeepQLearningAgent
+from agents.replay import PrioritizedReplayBuffer
+from conftest import make_state
 
 def test_state_size_splits_hand_and_shoe_features():
     assert HAND_FEATURE_COUNT + SHOE_FEATURE_COUNT == STATE_SIZE == 19
-
 
 def test_encode_state_zeros_shoe_features_when_disabled():
     state = make_state()
@@ -56,7 +36,6 @@ def test_encode_state_zeros_shoe_features_when_disabled():
     )
     assert with_shoe[HAND_FEATURE_COUNT:].abs().sum().item() > 0
 
-
 def test_agent_encode_state_respects_use_shoe_features_flag():
     agent = DeepQLearningAgent()
     state = make_state()
@@ -71,7 +50,6 @@ def test_agent_encode_state_respects_use_shoe_features_flag():
     encoded = agent.encode_state(state)
     assert encoded[8].item() > 0
 
-
 def test_prioritized_replay_buffer_clear():
     buffer = PrioritizedReplayBuffer(capacity=10)
     dummy = MagicMock()
@@ -81,7 +59,6 @@ def test_prioritized_replay_buffer_clear():
 
     buffer.clear()
     assert len(buffer) == 0
-
 
 def test_curriculum_enables_shoe_features_and_clears_replay(monkeypatch):
     agent = DeepQLearningAgent(min_replay_size=10_000, batch_size=4)
@@ -117,7 +94,6 @@ def test_curriculum_enables_shoe_features_and_clears_replay(monkeypatch):
     # Phase B starts at episode 3: buffer cleared then two more episodes append.
     assert len(agent.replay_buffer) == 2
 
-
 def test_no_curriculum_keeps_shoe_features_from_start(monkeypatch):
     agent = DeepQLearningAgent()
     game = MagicMock()
@@ -137,7 +113,6 @@ def test_no_curriculum_keeps_shoe_features_from_start(monkeypatch):
     )
 
     assert agent.use_shoe_features is True
-
 
 def test_clear_replay_buffer_helper_works_on_deque():
     agent = DeepQLearningAgent()

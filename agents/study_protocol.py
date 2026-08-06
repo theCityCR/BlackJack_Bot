@@ -1,8 +1,4 @@
-"""Frozen study-protocol contracts for warm-start, curves, and ablations.
-
-Wave 1 implements ``agents/warmstart.py`` and ``agents/learning_curves.py``.
-Wave 2 wires them into ``run_neural_training_loop``. Wave 3 uses ablation ids.
-"""
+"""Study-protocol contracts for warm-start, curves, and ablations."""
 
 from __future__ import annotations
 

@@ -3,25 +3,8 @@
 from __future__ import annotations
 
 from agents.common import HAND_FEATURE_COUNT, STATE_SIZE, encode_state
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
-from game import GameState
-
-
-def make_state() -> GameState:
-    return GameState(
-        player_value=16,
-        dealer_upcard=10,
-        usable_ace=False,
-        can_double=True,
-        can_split=False,
-        is_split_hand=False,
-        active_hand_index=0,
-        num_hands=1,
-        count_vector=(2, 2, 2, 2, 2, 2, 2, 2, 2, 8),
-    )
-
+from agents.double_dqn import DoubleQNetworkLearningAgent
+from conftest import make_state
 
 def test_compact_hand_only_encode_is_8d():
     state = make_state()
@@ -30,7 +13,6 @@ def test_compact_hand_only_encode_is_8d():
     full = encode_state(state, use_shoe_features=True)
     assert full.shape == (STATE_SIZE,)
     assert encoded.tolist() == full[:HAND_FEATURE_COUNT].tolist()
-
 
 def test_hand_only_agent_uses_8d_network():
     agent = DoubleQNetworkLearningAgent(hand_only_encoder=True, batch_size=4)

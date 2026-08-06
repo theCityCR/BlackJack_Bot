@@ -5,15 +5,11 @@ from __future__ import annotations
 import torch
 
 from agents.common import resolve_torch_device
-from agents.double_q_network_learning.double_q_network_learning_agent import (
-    DoubleQNetworkLearningAgent,
-)
+from agents.double_dqn import DoubleQNetworkLearningAgent
 from game import Action, GameState
-
 
 def test_resolve_torch_device_explicit_cpu():
     assert resolve_torch_device("cpu").type == "cpu"
-
 
 def test_resolve_torch_device_prefers_accelerator_when_available():
     device = resolve_torch_device()
@@ -23,16 +19,13 @@ def test_resolve_torch_device_prefers_accelerator_when_available():
         # MPS is opt-in only; default without CUDA is CPU.
         assert device.type == "cpu"
 
-
 def test_resolve_torch_device_honors_env(monkeypatch):
     monkeypatch.setenv("BLACKJACK_TORCH_DEVICE", "cpu")
     assert resolve_torch_device().type == "cpu"
 
-
 def test_double_dqn_places_model_on_resolved_device():
     agent = DoubleQNetworkLearningAgent(batch_size=4, device=None)
     assert next(agent.model.parameters()).device.type == agent.device.type
-
 
 def test_double_dqn_train_step_runs_on_selected_device():
     agent = DoubleQNetworkLearningAgent(

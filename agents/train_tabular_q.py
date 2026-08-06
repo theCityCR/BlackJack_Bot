@@ -4,38 +4,20 @@ from __future__ import annotations
 
 import argparse
 import random
-from collections import defaultdict
 
 from agents.common import (
-    categorize_reward,
-    package_results_path,
+    agent_results_path,
+    evaluate_greedy,
     print_distribution,
 )
-from agents.q_learning_simple.q_learning_agent import QLearningAgent
+from agents.tabular_q import QLearningAgent
 from config import NUM_TRAINING_EPISODES
 from game import BlackjackGame
 
 
 PRINT_INTERVAL = 5_000
 FINAL_EVALUATION_EPISODES = 5_000
-MODEL_PATH = package_results_path(__file__, "q_table.json")
-
-
-def evaluate_greedy(agent: QLearningAgent, num_episodes: int):
-    game = BlackjackGame()
-    old_epsilon = agent.epsilon
-    agent.epsilon = 0.0
-
-    total_reward = 0.0
-    distribution: dict[str, int] = defaultdict(int)
-
-    for _ in range(num_episodes):
-        reward = agent.play_episode(game)
-        total_reward += reward
-        distribution[categorize_reward(reward)] += 1
-
-    agent.epsilon = old_epsilon
-    return total_reward / num_episodes, distribution
+MODEL_PATH = agent_results_path("tabular_q", "q_table.json")
 
 
 def train(num_episodes: int = NUM_TRAINING_EPISODES) -> QLearningAgent:

@@ -3,7 +3,7 @@
 import argparse
 import random
 
-from agents.rule_agent.rule_agent import RuleAgent
+from agents.rule import RuleAgent
 from game import BlackjackGame
 
 
