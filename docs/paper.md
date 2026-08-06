@@ -51,7 +51,7 @@ Legal-action masking is used throughout neural agents.
 
 ### 3.2 Shared experimental protocol
 
-All neural trainers share defaults in `config.py` (200k episodes, batch 128, ε 1→0.05 with decay 0.99997, target sync every 2k steps, 4 gradient updates/episode). Trainers accept `--no-curriculum` and `--no-warmstart`.
+All neural trainers share defaults in `config.py` (200k episodes, batch 128, ε 1→0.05 with decay 0.99997, target sync every 2k steps, 2 gradient updates/episode). Mid-run learning-curve probes use 500 greedy episodes every 25k training episodes; published comparisons use the 25k final greedy eval. Trainers accept `--no-curriculum` and `--no-warmstart`.
 
 **Curriculum.** Phase A (100k): shoe features off. Phase B: shoe features on; replay cleared at the boundary.
 
