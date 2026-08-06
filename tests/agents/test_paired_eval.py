@@ -5,6 +5,36 @@ from __future__ import annotations
 from agents.common import episode_rng_seed, evaluate_greedy, make_episode_game
 from agents.rule import RuleAgent
 from cards import Deck
+from game import Action, BlackjackGame
+
+
+class AlwaysHitAgent:
+    """Minimal policy that prefers HIT so it diverges from basic strategy."""
+
+    def play_episode(self, game: BlackjackGame) -> float:
+        state = game.reset()
+        if state is None:
+            return game.round_reward
+
+        reward = 0.0
+        done = False
+        while not done:
+            available = game.available_actions()
+            action = Action.HIT if Action.HIT in available else Action.STAND
+            _, reward, done = game.step(action)
+        return reward
+
+
+def _track_force_resets(monkeypatch) -> list[tuple[int, ...]]:
+    shoes: list[tuple[int, ...]] = []
+    original = Deck.force_reset
+
+    def tracking_reset(self):
+        original(self)
+        shoes.append(tuple(self.cards))
+
+    monkeypatch.setattr(Deck, "force_reset", tracking_reset)
+    return shoes
 
 
 def test_episode_rng_seed_is_stable_and_varies():
@@ -26,21 +56,39 @@ def test_evaluate_greedy_with_seed_is_reproducible():
     assert first == second
 
 
-def test_evaluate_greedy_pairs_shoes_across_agents(monkeypatch):
-    """Two agents with the same seed see the same opening shoe each episode."""
-    shoes: list[tuple[int, ...]] = []
-    original = Deck.force_reset
-
-    def tracking_reset(self):
-        original(self)
-        shoes.append(tuple(self.cards))
-
-    monkeypatch.setattr(Deck, "force_reset", tracking_reset)
+def test_evaluate_greedy_pairs_shoes_across_different_agents(monkeypatch):
+    """Distinct policies under the same seed see the same opening shoe each episode."""
+    shoes = _track_force_resets(monkeypatch)
 
     evaluate_greedy(RuleAgent(), 12, seed=99)
-    first_run = list(shoes)
+    rule_shoes = list(shoes)
     shoes.clear()
-    evaluate_greedy(RuleAgent(), 12, seed=99)
-    assert shoes == first_run
-    # One fresh shoe shuffle per episode (BlackjackGame / make_episode_game).
-    assert len(first_run) == 12
+    evaluate_greedy(AlwaysHitAgent(), 12, seed=99)
+
+    assert shoes == rule_shoes
+    assert len(rule_shoes) == 12
+
+
+def test_evaluate_greedy_without_seed_reuses_persistent_game():
+    """Mid-run probes (seed=None) reuse one BlackjackGame across episodes."""
+    game_ids: list[int] = []
+
+    class TrackingAgent(RuleAgent):
+        def play_episode(self, game, render: bool = False) -> float:
+            game_ids.append(id(game))
+            return super().play_episode(game, render=render)
+
+    evaluate_greedy(TrackingAgent(), 6, seed=None)
+    assert len(game_ids) == 6
+    assert len(set(game_ids)) == 1
+
+    paired_ids: list[int] = []
+
+    class PairedTrackingAgent(RuleAgent):
+        def play_episode(self, game, render: bool = False) -> float:
+            paired_ids.append(id(game))
+            return super().play_episode(game, render=render)
+
+    evaluate_greedy(PairedTrackingAgent(), 6, seed=5)
+    assert len(paired_ids) == 6
+    assert len(set(paired_ids)) == 6
