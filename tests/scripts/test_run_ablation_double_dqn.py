@@ -116,7 +116,7 @@ def test_write_ablation_results(tmp_path: Path):
     ablation.write_ablation_results(
         rows,
         output_path,
-        seed=42,
+        seeds=[42],
         smoke=True,
     )
 
@@ -244,3 +244,44 @@ def test_smoke_run_one_condition_writes_json(tmp_path: Path):
     assert row["episodes"] == ablation.SMOKE_EPISODES
     assert Path(row["model_path"]).is_file()
     assert Path(row["learning_curve_path"]).is_file()
+
+
+@patch.object(ablation, "run_ablation_condition")
+def test_main_multi_seed_uses_seed_subdirs(mock_run_condition, tmp_path: Path, monkeypatch):
+    mock_run_condition.return_value = {
+        "condition_id": ABLATION_CONDITION_A,
+        "label": "Full from scratch",
+        "average_reward": 0.0,
+        "training_steps": 0,
+        "win_rate": 0.4,
+        "loss_rate": 0.5,
+        "draw_rate": 0.1,
+        "episodes": ablation.SMOKE_EPISODES,
+        "eval_episodes": ablation.SMOKE_FINAL_EVAL_EPISODES,
+        "seed": 0,
+        "curriculum": False,
+        "warmstart": False,
+        "force_shoe_off": False,
+        "model_path": str(tmp_path / "model.pt"),
+        "learning_curve_path": str(tmp_path / "learning_curve.csv"),
+    }
+    monkeypatch.setattr(ablation, "ablation_base_dir", lambda: tmp_path)
+
+    exit_code = ablation.main(
+        [
+            "--smoke",
+            "--conditions",
+            ABLATION_CONDITION_A,
+            "--seeds",
+            "11,12",
+        ]
+    )
+
+    assert exit_code == 0
+    assert mock_run_condition.call_count == 2
+    first_base = mock_run_condition.call_args_list[0].kwargs["ablation_base"]
+    second_base = mock_run_condition.call_args_list[1].kwargs["ablation_base"]
+    assert first_base == tmp_path / "seed_11"
+    assert second_base == tmp_path / "seed_12"
+    assert (tmp_path / "seed_11" / "ablation_results.json").exists()
+    assert (tmp_path / "multi_seed_ablation_results.json").exists()

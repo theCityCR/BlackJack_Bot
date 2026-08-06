@@ -10,6 +10,7 @@ from typing import Any
 
 import torch
 
+from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
 from agents.common import agent_results_path, evaluate_greedy
 from agents.dqn import DeepQLearningAgent
 from agents.double_dqn import DoubleQNetworkLearningAgent
@@ -200,7 +201,7 @@ def guard_docs_publish(output_dir: Path, evaluated_names: set[str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--episodes", type=int, default=25_000)
-    parser.add_argument("--seed", type=int, default=42)
+    add_seed_arguments(parser)
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -210,20 +211,40 @@ def main() -> None:
     args = parser.parse_args()
     if args.episodes <= 0:
         parser.error("--episodes must be positive")
+    try:
+        seeds = seeds_from_args(args)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     agents = collect_agents()
     evaluated_names = {name for name, _, _ in agents}
     guard_docs_publish(args.output_dir, evaluated_names)
 
-    results = []
-    for name, agent, training_steps in agents:
-        result = evaluate_agent(name, agent, args.episodes, args.seed)
-        result["training_steps"] = training_steps
-        results.append(result)
-        print(f"{name:28s} average reward: {result['average_reward']:+.4f}")
+    multi = len(seeds) > 1
+    aggregate: list[dict[str, Any]] = []
 
-    write_results(results, args.output_dir, args.seed)
-    print(f"Wrote results to {args.output_dir}")
+    for seed in seeds:
+        out_dir = seed_artifact_dir(args.output_dir, seed, multi=multi)
+        results = []
+        print(f"\n=== Eval seed={seed} → {out_dir} ===")
+        for name, agent, training_steps in agents:
+            result = evaluate_agent(name, agent, args.episodes, seed)
+            result["training_steps"] = training_steps
+            results.append(result)
+            print(f"{name:28s} average reward: {result['average_reward']:+.4f}")
+
+        write_results(results, out_dir, seed)
+        print(f"Wrote results to {out_dir}")
+        aggregate.append({"seed": seed, "output_dir": str(out_dir), "results": results})
+
+    if multi:
+        summary_path = args.output_dir / "multi_seed_benchmark_results.json"
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps({"seeds": seeds, "runs": aggregate}, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Wrote multi-seed aggregate to {summary_path}")
 
 
 if __name__ == "__main__":

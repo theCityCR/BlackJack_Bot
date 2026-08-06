@@ -8,10 +8,15 @@ Finite-shoe Blackjack RL study. Start with:
 
 ## Scale (approximate)
 
-- Five RL variants + rule baseline
+- Five RL variants + verified 2-deck S17 DAS rule baseline
 - Shared 200k-episode neural protocol (`config/protocol.py`)
 - Primary ablation subject: Double DQN (`agents/double_dqn.py`)
+- Multi-seed CLI scaffolding via `--seeds` (matrix not yet published)
 
 ## Future work
 
-Re-run hand-only gap-close under paired per-episode eval and replace the provisional §5.3 table. Then: variable betting / bankroll, richer rule charts, configurable penetration, and optional actor-critic methods—after flat-bet play is near the rule baseline.
+1. Re-run hand-only gap-close under paired eval and replace provisional §5.3.
+2. Re-eval the rule baseline (and warm-start clones) after the chart tighten; published −0.0103 rows are historical.
+3. Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.
+4. Variable betting / bankroll — see [docs/design_variable_betting.md](docs/design_variable_betting.md) (design only until flat-bet ≈ rule).
+5. Configurable penetration and optional actor-critic methods as later follow-ons.

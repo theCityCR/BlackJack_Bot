@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
@@ -148,17 +149,19 @@ def write_ablation_results(
     results: list[dict[str, Any]],
     output_path: Path | str,
     *,
-    seed: int,
+    seeds: list[int],
     smoke: bool,
 ) -> Path:
     """Persist the ablation summary as JSON."""
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "seed": seed,
+    payload: dict[str, Any] = {
+        "seeds": seeds,
         "smoke": smoke,
         "conditions": results,
     }
+    if len(seeds) == 1:
+        payload["seed"] = seeds[0]
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return path
 
@@ -179,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         default=NEURAL_TRAINING_EPISODES,
         help=f"Training episodes per condition (default: {NEURAL_TRAINING_EPISODES})",
     )
-    parser.add_argument("--seed", type=int, default=42)
+    add_seed_arguments(parser)
     parser.add_argument(
         "--smoke",
         action="store_true",
@@ -205,42 +208,88 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=default_output_path(),
-        help="JSON path for the ablation summary",
+        default=None,
+        help="JSON path for the ablation summary (default: under ablation base)",
     )
     args = parser.parse_args(argv)
+
+    try:
+        seeds = seeds_from_args(args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     invalid = [condition for condition in args.conditions if condition not in ABLATION_CONDITIONS]
     if invalid:
         print(f"error: unknown conditions: {', '.join(invalid)}", file=sys.stderr)
         return 1
 
-    results: list[dict[str, Any]] = []
-    for condition_id in args.conditions:
-        print(f"\n=== Ablation {condition_id}: {ABLATION_CONDITIONS[condition_id]['label']} ===")
-        row = run_ablation_condition(
-            condition_id,
-            episodes=args.episodes,
-            seed=args.seed,
-            smoke=args.smoke,
-            eval_episodes=args.eval_episodes,
-            device=args.device,
-        )
-        results.append(row)
-        print(
-            f"average_reward={row['average_reward']:.4f} "
-            f"training_steps={row['training_steps']} "
-            f"win/loss/draw={row['win_rate']:.3f}/"
-            f"{row['loss_rate']:.3f}/{row['draw_rate']:.3f}"
-        )
+    multi = len(seeds) > 1
+    root_base = ablation_base_dir()
+    all_results: list[dict[str, Any]] = []
+    per_seed_paths: list[dict[str, Any]] = []
 
-    output_path = write_ablation_results(
-        results,
-        args.output,
-        seed=args.seed,
-        smoke=args.smoke,
-    )
-    print(f"\nWrote ablation summary to {output_path}")
+    for seed in seeds:
+        seed_base = seed_artifact_dir(root_base, seed, multi=multi)
+        results: list[dict[str, Any]] = []
+        for condition_id in args.conditions:
+            print(
+                f"\n=== Ablation {condition_id}: "
+                f"{ABLATION_CONDITIONS[condition_id]['label']} (seed={seed}) ==="
+            )
+            row = run_ablation_condition(
+                condition_id,
+                episodes=args.episodes,
+                seed=seed,
+                smoke=args.smoke,
+                eval_episodes=args.eval_episodes,
+                ablation_base=seed_base,
+                device=args.device,
+            )
+            results.append(row)
+            all_results.append(row)
+            print(
+                f"average_reward={row['average_reward']:.4f} "
+                f"training_steps={row['training_steps']} "
+                f"win/loss/draw={row['win_rate']:.3f}/"
+                f"{row['loss_rate']:.3f}/{row['draw_rate']:.3f}"
+            )
+
+        seed_output = (
+            args.output
+            if args.output is not None and not multi
+            else seed_base / "ablation_results.json"
+        )
+        if args.output is not None and multi:
+            seed_output = seed_artifact_dir(args.output.parent, seed, multi=True) / args.output.name
+        write_ablation_results(
+            results,
+            seed_output,
+            seeds=[seed],
+            smoke=args.smoke,
+        )
+        per_seed_paths.append({"seed": seed, "output": str(seed_output)})
+        print(f"\nWrote ablation summary to {seed_output}")
+
+    if multi:
+        aggregate_path = (
+            args.output
+            if args.output is not None
+            else root_base / "multi_seed_ablation_results.json"
+        )
+        write_ablation_results(
+            all_results,
+            aggregate_path,
+            seeds=seeds,
+            smoke=args.smoke,
+        )
+        # Attach per-seed path index for scaffolding consumers.
+        payload = json.loads(Path(aggregate_path).read_text(encoding="utf-8"))
+        payload["per_seed"] = per_seed_paths
+        Path(aggregate_path).write_text(
+            json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"\nWrote multi-seed aggregate to {aggregate_path}")
     return 0
 
 

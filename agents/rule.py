@@ -1,49 +1,126 @@
 """
-Rule-based Blackjack agent.
+Rule-based Blackjack agent (2-deck S17 DAS basic strategy).
 
-Supports:
-- Hit
-- Stand
-- Double
-- Split
+Total-dependent chart aligned with Wizard-of-Odds-style double-deck strategy
+where the dealer stands on soft 17 and doubling after split is allowed.
+No insurance or surrender (matches the environment).
 
-This is a simple basic-strategy-inspired agent, not a perfect casino-specific
-basic strategy chart.
+Dealer Ace is encoded as ``dealer_upcard == 1``.
 """
 
+from __future__ import annotations
+
 from game import Action, BlackjackGame, GameState
+
+# Dealer upcards in chart column order: 2-10, Ace.
+_DEALERS = (2, 3, 4, 5, 6, 7, 8, 9, 10, 1)
+
+# Cell codes: H hit, S stand, Dh double-or-hit, Ds double-or-stand, P split.
+_H = "H"
+_S = "S"
+_DH = "Dh"
+_DS = "Ds"
+_P = "P"
+
+
+def _row(*cells: str) -> dict[int, str]:
+    if len(cells) != len(_DEALERS):
+        raise ValueError("chart row must have 10 dealer columns")
+    return dict(zip(_DEALERS, cells))
+
+
+# Hard totals 5–21 (totals below 5 do not occur as playable decisions here).
+_HARD: dict[int, dict[int, str]] = {
+    5: _row(_H, _H, _H, _H, _H, _H, _H, _H, _H, _H),
+    6: _row(_H, _H, _H, _H, _H, _H, _H, _H, _H, _H),
+    7: _row(_H, _H, _H, _H, _H, _H, _H, _H, _H, _H),
+    8: _row(_H, _H, _H, _H, _H, _H, _H, _H, _H, _H),
+    # 2-deck: double 9 vs 2-6 (includes dealer 2).
+    9: _row(_DH, _DH, _DH, _DH, _DH, _H, _H, _H, _H, _H),
+    # Double 10 vs 2-9 only — never vs 10 or Ace.
+    10: _row(_DH, _DH, _DH, _DH, _DH, _DH, _DH, _DH, _H, _H),
+    11: _row(_DH, _DH, _DH, _DH, _DH, _DH, _DH, _DH, _DH, _DH),
+    12: _row(_H, _H, _S, _S, _S, _H, _H, _H, _H, _H),
+    13: _row(_S, _S, _S, _S, _S, _H, _H, _H, _H, _H),
+    14: _row(_S, _S, _S, _S, _S, _H, _H, _H, _H, _H),
+    15: _row(_S, _S, _S, _S, _S, _H, _H, _H, _H, _H),
+    16: _row(_S, _S, _S, _S, _S, _H, _H, _H, _H, _H),
+    17: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+    18: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+    19: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+    20: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+    21: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+}
+
+# Soft totals (A,2)=13 … (A,9)=20.
+_SOFT: dict[int, dict[int, str]] = {
+    13: _row(_H, _H, _H, _DH, _DH, _H, _H, _H, _H, _H),
+    14: _row(_H, _H, _H, _DH, _DH, _H, _H, _H, _H, _H),
+    15: _row(_H, _H, _DH, _DH, _DH, _H, _H, _H, _H, _H),
+    16: _row(_H, _H, _DH, _DH, _DH, _H, _H, _H, _H, _H),
+    17: _row(_H, _DH, _DH, _DH, _DH, _H, _H, _H, _H, _H),
+    # 2-deck: double soft 18 vs 2-6; stand 7-8; hit 9-10-A.
+    18: _row(_DS, _DS, _DS, _DS, _DS, _S, _S, _H, _H, _H),
+    # 2-deck: double soft 19 vs 6 only.
+    19: _row(_S, _S, _S, _S, _DS, _S, _S, _S, _S, _S),
+    20: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+    21: _row(_S, _S, _S, _S, _S, _S, _S, _S, _S, _S),
+}
+
+# Pair rank -> dealer cell. 5s and 10s never split (looked up as hard totals).
+_PAIR: dict[int, dict[int, str]] = {
+    1: _row(_P, _P, _P, _P, _P, _P, _P, _P, _P, _P),  # A,A
+    2: _row(_P, _P, _P, _P, _P, _P, _H, _H, _H, _H),
+    3: _row(_P, _P, _P, _P, _P, _P, _H, _H, _H, _H),
+    4: _row(_H, _H, _H, _P, _P, _H, _H, _H, _H, _H),
+    6: _row(_P, _P, _P, _P, _P, _P, _H, _H, _H, _H),
+    7: _row(_P, _P, _P, _P, _P, _P, _H, _H, _H, _H),
+    8: _row(_P, _P, _P, _P, _P, _P, _P, _P, _P, _P),
+    9: _row(_P, _P, _P, _P, _P, _S, _P, _P, _S, _S),
+}
+
+
+def _resolve_cell(code: str, available: list[Action]) -> Action | None:
+    """Map a chart cell to a legal action, or None if the cell is not actionable."""
+    if code == _P:
+        return Action.SPLIT if Action.SPLIT in available else None
+    if code == _DH:
+        if Action.DOUBLE in available:
+            return Action.DOUBLE
+        return Action.HIT if Action.HIT in available else None
+    if code == _DS:
+        if Action.DOUBLE in available:
+            return Action.DOUBLE
+        return Action.STAND if Action.STAND in available else None
+    if code == _H:
+        return Action.HIT if Action.HIT in available else None
+    if code == _S:
+        return Action.STAND if Action.STAND in available else None
+    return None
 
 
 class RuleAgent:
     """
-    Rule-based Blackjack agent for the expanded game environment.
+    Verified 2-deck S17 DAS total-dependent basic strategy.
 
-    Uses the public GameState from game.py:
-    - player_value
-    - dealer_upcard
-    - usable_ace
-    - can_double
-    - can_split
-    - split-hand metadata
+    Uses the public GameState from game.py. Pair rank is inferred from
+    ``player_value`` when ``can_split`` is true (A,A special-cased as soft 12).
     """
 
     def choose_action(self, state: GameState, available_actions=None) -> Action:
-        """
-        Choose one legal action from the current public game state.
-        """
+        """Choose one legal action from the current public game state."""
         if available_actions is None:
-            available_actions = [
-                Action.HIT,
-                Action.STAND,
-                Action.DOUBLE,
-                Action.SPLIT,
-            ]
+            available_actions = [Action.HIT, Action.STAND]
+            if state.can_double:
+                available_actions.append(Action.DOUBLE)
+            if state.can_split:
+                available_actions.append(Action.SPLIT)
+        else:
+            available_actions = list(available_actions)
 
-        # If only one action is legal, take it.
         if len(available_actions) == 1:
             return available_actions[0]
 
-        # Value 21 should always stand.
         if state.player_value >= 21:
             return Action.STAND
 
@@ -51,148 +128,43 @@ class RuleAgent:
         value = state.player_value
 
         if Action.SPLIT in available_actions and state.can_split:
-            split_action = self._split_decision(state)
-            if split_action in available_actions:
-                return split_action
+            pair_rank = self._pair_rank(state)
+            if pair_rank is not None and pair_rank in _PAIR:
+                code = _PAIR[pair_rank].get(dealer, _H)
+                action = _resolve_cell(code, available_actions)
+                if action is not None:
+                    return action
+            # 5s / 10s fall through to hard-total chart.
 
-        if Action.DOUBLE in available_actions and state.can_double:
-            double_action = self._double_decision(state)
-            if double_action in available_actions:
-                return double_action
-
-        if state.usable_ace:
-            action = self._soft_total_decision(value, dealer)
+        if state.usable_ace and value in _SOFT:
+            code = _SOFT[value].get(dealer, _H)
         else:
-            action = self._hard_total_decision(value, dealer)
+            hard_value = min(max(value, 5), 21)
+            code = _HARD[hard_value].get(dealer, _H)
 
-        if action in available_actions:
+        action = _resolve_cell(code, available_actions)
+        if action is not None and action in available_actions:
             return action
 
-        # Safe fallback.
         if Action.STAND in available_actions:
             return Action.STAND
-
         return available_actions[0]
 
-    def _split_decision(self, state: GameState):
-        """
-        Basic split rules inferred from player_value.
-
-        Because GameState does not expose the actual pair card, we infer it from
-        the hand value when can_split is true.
-        """
+    @staticmethod
+    def _pair_rank(state: GameState) -> int | None:
+        """Infer pair rank from total when splitting is legal."""
         value = state.player_value
-        dealer = state.dealer_upcard
-
-        # A,A has value 12 with usable ace.
         if state.usable_ace and value == 12:
-            return Action.SPLIT
-
-        pair_value = value // 2
-
-        # Always split 8s.
-        if pair_value == 8:
-            return Action.SPLIT
-
-        # Never split 10s or 5s.
-        if pair_value in (10, 5):
+            return 1  # A,A
+        if value % 2 != 0:
             return None
-
-        # Split 2s, 3s, and 7s against dealer 2-7.
-        if pair_value in (2, 3, 7) and 2 <= dealer <= 7:
-            return Action.SPLIT
-
-        # Split 6s against dealer 2-6.
-        if pair_value == 6 and 2 <= dealer <= 6:
-            return Action.SPLIT
-
-        # Split 4s only against dealer 5-6.
-        if pair_value == 4 and 5 <= dealer <= 6:
-            return Action.SPLIT
-
-        # Split 9s against 2-6 and 8-9.
-        if pair_value == 9 and (2 <= dealer <= 6 or 8 <= dealer <= 9):
-            return Action.SPLIT
-
-        return None
-
-    def _double_decision(self, state: GameState):
-        """
-        Basic double-down rules.
-        """
-        value = state.player_value
-        dealer = state.dealer_upcard
-
-        if state.usable_ace:
-            # Soft 13/14: double vs 5-6.
-            if value in (13, 14) and 5 <= dealer <= 6:
-                return Action.DOUBLE
-
-            # Soft 15/16: double vs 4-6.
-            if value in (15, 16) and 4 <= dealer <= 6:
-                return Action.DOUBLE
-
-            # Soft 17: double vs 3-6.
-            if value == 17 and 3 <= dealer <= 6:
-                return Action.DOUBLE
-
-            # Soft 18: double vs 3-6.
-            if value == 18 and 3 <= dealer <= 6:
-                return Action.DOUBLE
-
-            return None
-
-        # Hard totals.
-        if value == 11:
-            return Action.DOUBLE
-
-        if value == 10 and dealer <= 9:
-            return Action.DOUBLE
-
-        if value == 9 and 3 <= dealer <= 6:
-            return Action.DOUBLE
-
-        return None
-
-    def _soft_total_decision(self, value: int, dealer: int) -> Action:
-        """
-        Hit/stand rules for soft totals.
-        """
-        if value <= 17:
-            return Action.HIT
-
-        if value == 18:
-            if dealer in (9, 10, 1):
-                return Action.HIT
-            return Action.STAND
-
-        return Action.STAND
-
-    def _hard_total_decision(self, value: int, dealer: int) -> Action:
-        """
-        Hit/stand rules for hard totals.
-        """
-        if value <= 11:
-            return Action.HIT
-
-        if value == 12:
-            if 4 <= dealer <= 6:
-                return Action.STAND
-            return Action.HIT
-
-        if 13 <= value <= 16:
-            if 2 <= dealer <= 6:
-                return Action.STAND
-            return Action.HIT
-
-        return Action.STAND
+        rank = value // 2
+        if rank in (5, 10):
+            return None  # never split; use hard chart
+        return rank
 
     def play_episode(self, game: BlackjackGame, render: bool = False) -> float:
-        """
-        Play one full game episode.
-
-        Returns the final round reward.
-        """
+        """Play one full game episode. Returns the final round reward."""
         state = game.reset()
 
         if state is None:
@@ -208,7 +180,6 @@ class RuleAgent:
         while not done:
             available_actions = game.available_actions()
             action = self.choose_action(state, available_actions)
-
             next_state, reward, done = game.step(action)
 
             if render:

@@ -4,7 +4,8 @@
   "notes": [
     "Final greedy eval was unpaired (pre paired-per-episode-shoe change).",
     "Working checkpoint under agents/results/double_dqn/gap_close/ was later overwritten by a smoke run; re-train under paired eval before treating as definitive.",
-    "Win/loss/draw rates for the 25k final eval were not logged; only average rewards and training steps are recorded here."
+    "Win/loss/draw rates for the 25k final eval were not logged; only average rewards and training steps are recorded here.",
+    "Rule EV −0.0103 is the historical published baseline; RuleAgent is now a verified 2-deck S17 DAS chart pending re-eval."
   ],
   "seed": 42,
   "smoke": false,

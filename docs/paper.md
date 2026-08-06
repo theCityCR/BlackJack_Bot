@@ -4,7 +4,7 @@
 
 ## Abstract
 
-We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a basic-strategy-inspired rule baseline (~−1.0% EV). Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) improves further to about −2.5% EV but still trails the rule agent (~−1.0%). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
+We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a **2-deck S17 DAS** rule baseline (~−1.0% EV in published tables). Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) improves further to about −2.5% EV but still trails the rule agent (~−1.0%). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
 
 ## 1. Introduction
 
@@ -40,7 +40,7 @@ Configured in [`config/`](../config/), implemented in [`game.py`](../game.py) / 
 
 | Agent | Role |
 |---|---|
-| Rule baseline | Basic-strategy-inspired policy; ignores shoe counts |
+| Rule baseline | Verified 2-deck S17 DAS total-dependent chart; ignores shoe counts |
 | Tabular Q-learning | Discrete `GameState` keys |
 | DQN | MLP + replay + target net |
 | Double DQN | Double Q targets |
@@ -130,11 +130,15 @@ Protocol: true **8-D** hand encoder, **100,000** rule warm-start episodes, **500
 | Hand-only gap-close | −0.0248 | 1,046,535 |
 | Gap (agent − rule) | −0.0145 | — |
 
-Relative to equalized condition B (−0.0325), longer cloning + RL closes part of the remaining distance to the rule agent, but flat-bet play is still short of basic-strategy-inspired EV (~−1.0% vs −2.5%).
+Relative to equalized condition B (−0.0325), longer cloning + RL closes part of the remaining distance to the rule agent, but flat-bet play is still short of rule-baseline EV (~−1.0% vs −2.5%).
 
-**Provisional caveats.** These averages come from the training log after the full run completed. The final comparison used the **pre-paired** eval path (agent and rule were not on identical per-episode shoes). The working checkpoint under `agents/results/double_dqn/gap_close/` was later overwritten by a smoke run, so this table is **not** backed by a recoverable model artifact in-tree. Treat the numbers as directional until a paired-eval re-run is published.
+**Provisional caveats (directional only).**
+- Averages come from the training log after the full run completed—not a checked-in checkpoint.
+- Final agent-vs-rule comparison used the **pre-paired** eval path (not identical per-episode shoes).
+- The working checkpoint under `agents/results/double_dqn/gap_close/` was later overwritten by a smoke run.
+- Rule EV in this table matches the published historical baseline (−0.0103); the in-repo rule policy has since been tightened to a verified 2-deck S17 DAS chart, so a future paired re-eval may move both sides slightly.
 
-Artifact note: [`docs/results/gap_close_results.json`](results/gap_close_results.json). Smoke CI writes to `agents/results/double_dqn/gap_close_smoke/`; full runs refuse to overwrite a prior non-smoke summary unless `--force` is set.
+Artifact note: [`docs/results/gap_close_results.json`](results/gap_close_results.json). Smoke CI writes to `agents/results/double_dqn/gap_close_smoke/`; full runs refuse to overwrite a prior non-smoke summary unless `--force` is set. Trainers accept `--seeds 42,43,…` for multi-seed scaffolding (writes `seed_<n>/` subdirs); that matrix has **not** been run for publication.
 
 Reproduce (paired eval; replaces the provisional table when finished):
 
@@ -146,7 +150,7 @@ python3 scripts/run_hand_only_gap_close.py --seed 42
 
 Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin. Curriculum and rule warm-start help relative to A, but under a 200k-episode budget the best learned policy remains hand-only—still short of the rule baseline (~−1.0% vs −3.3% EV). The provisional gap-close (§5.3) shows that more imitation and hand-only RL improve further (~−2.5%), yet still do not match the rule agent under this protocol.
 
-**Limitations.** Flat betting only; no insurance/surrender; rule baseline is not a perfect chart; a single seed and one architecture for the ablation table; gap-close §5.3 is provisional (unpaired final eval; checkpoint not retained). Positive EV vs the house would require bet variation (and typically counting), which is future work—not the claim of this study.
+**Limitations.** Flat betting only; no insurance/surrender. Published rule EV rows (−0.0103) and warm-start clones reflect the **pre-tighten** baseline; the current `RuleAgent` encodes a verified 2-deck S17 DAS chart for future runs and has not yet been re-benchmarked into `docs/results/`. Ablation and gap-close tables are single-seed (42); `--seeds` CLI scaffolding exists but the multi-seed matrix is unpublished. Gap-close §5.3 is provisional (unpaired final eval; checkpoint not retained). Variable betting is design-only ([`docs/design_variable_betting.md`](design_variable_betting.md))—positive EV vs the house is future work, not the claim of this study.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
@@ -170,7 +174,7 @@ Evaluate checkpoints:
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`.
+Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed scaffolding: `--seeds 42,43,44` on those runners and `evaluate_agents.py`. Variable betting design: [`docs/design_variable_betting.md`](design_variable_betting.md).
 
 ## License
 

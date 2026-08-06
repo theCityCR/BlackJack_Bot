@@ -147,3 +147,36 @@ def test_smoke_run_does_not_touch_full_results_dir(
 
     assert Path(summary["model_path"]).parent == smoke_dir
     assert json.loads((full_dir / "gap_close_results.json").read_text())["smoke"] is False
+
+
+@patch.object(gap_close, "save_torch_checkpoint")
+@patch.object(gap_close, "evaluate_greedy")
+@patch.object(gap_close, "run_neural_training_loop")
+@patch.object(gap_close, "DoubleQNetworkLearningAgent")
+@patch.object(gap_close, "BlackjackGame")
+@patch.object(gap_close, "set_seed")
+def test_main_multi_seed_writes_seed_subdirs(
+    mock_set_seed,
+    mock_game,
+    mock_agent_cls,
+    mock_run_loop,
+    mock_eval_greedy,
+    mock_save_checkpoint,
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setattr(gap_close, "SMOKE_RESULTS_DIR", tmp_path / "smoke")
+    monkeypatch.setattr(gap_close, "FULL_RESULTS_DIR", tmp_path / "full")
+
+    agent = MagicMock()
+    agent.input_size = 8
+    agent.training_steps = 3
+    mock_agent_cls.return_value = agent
+    mock_eval_greedy.return_value = (-0.02, {"normal_win": 1})
+
+    exit_code = gap_close.main(["--smoke", "--seeds", "3,4"])
+    assert exit_code == 0
+    assert (tmp_path / "smoke" / "seed_3" / "gap_close_results.json").exists()
+    assert (tmp_path / "smoke" / "seed_4" / "gap_close_results.json").exists()
+    assert (tmp_path / "smoke" / "multi_seed_gap_close_results.json").exists()
+    assert not (tmp_path / "full").exists() or not any((tmp_path / "full").iterdir())

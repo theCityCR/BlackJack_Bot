@@ -20,6 +20,7 @@ import argparse
 import json
 from pathlib import Path
 
+from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
@@ -172,7 +173,7 @@ def run_gap_close(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--seed", type=int, default=42)
+    add_seed_arguments(parser)
     parser.add_argument(
         "--warmstart-episodes",
         type=int,
@@ -199,14 +200,56 @@ def main(argv: list[str] | None = None) -> int:
         help="Allow overwriting an existing non-smoke gap_close/ summary",
     )
     args = parser.parse_args(argv)
-    run_gap_close(
-        seed=args.seed,
-        warmstart_episodes=args.warmstart_episodes,
-        train_episodes=args.train_episodes,
-        eval_episodes=args.eval_episodes,
-        smoke=args.smoke,
-        force=args.force,
-    )
+    try:
+        seeds = seeds_from_args(args)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    multi = len(seeds) > 1
+    base = results_dir_for(smoke=args.smoke)
+    summaries: list[dict] = []
+
+    for seed in seeds:
+        out_dir = seed_artifact_dir(base, seed, multi=multi)
+        # Only guard the legacy single-seed full path.
+        if not multi and not args.smoke:
+            guard_full_results_overwrite(out_dir, force=args.force)
+        summary = run_gap_close(
+            seed=seed,
+            warmstart_episodes=args.warmstart_episodes,
+            train_episodes=args.train_episodes,
+            eval_episodes=args.eval_episodes,
+            smoke=args.smoke,
+            force=True if multi else args.force,
+            results_dir=out_dir,
+        )
+        summaries.append(summary)
+
+    if multi:
+        aggregate_path = base / "multi_seed_gap_close_results.json"
+        aggregate_path.write_text(
+            json.dumps(
+                {
+                    "seeds": seeds,
+                    "smoke": args.smoke,
+                    "runs": [
+                        {
+                            "seed": row["seed"],
+                            "gap": row["gap"],
+                            "agent_average_reward": row["agent"]["average_reward"],
+                            "rule_average_reward": row["rule_baseline"]["average_reward"],
+                            "model_path": row["model_path"],
+                            "learning_curve_path": row["learning_curve_path"],
+                        }
+                        for row in summaries
+                    ],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"Wrote multi-seed aggregate to {aggregate_path}")
     return 0
 
 
