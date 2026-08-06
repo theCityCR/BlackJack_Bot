@@ -58,15 +58,14 @@ def encode_state(
     state: GameState,
     *,
     use_shoe_features: bool = True,
+    compact_hand_only: bool = False,
 ) -> torch.Tensor:
-    """Encode a GameState into the shared 19-feature vector.
+    """Encode a GameState into hand features and optional shoe features.
 
-    When ``use_shoe_features`` is False (curriculum phase A), the shoe fraction
-    and remaining-card counts are zeroed so the agent learns hand policy first.
+    When ``compact_hand_only`` is True, returns only the 8 hand features (true
+    hand-only encoder for gap-closing experiments). Otherwise returns the
+    shared 19-D vector; with ``use_shoe_features`` False, shoe dims are zeroed.
     """
-    count_vector = tuple(state.count_vector)
-    cards_remaining = sum(count_vector)
-
     hand_features = [
         state.player_value / 21,
         state.dealer_upcard / 10,
@@ -77,6 +76,12 @@ def encode_state(
         state.active_hand_index / MAX_PLAYER_HANDS,
         state.num_hands / MAX_PLAYER_HANDS,
     ]
+
+    if compact_hand_only:
+        return torch.tensor(hand_features, dtype=torch.float32)
+
+    count_vector = tuple(state.count_vector)
+    cards_remaining = sum(count_vector)
 
     if use_shoe_features:
         if cards_remaining == 0:
@@ -320,8 +325,11 @@ def evaluate_greedy(agent: Any, num_episodes: int) -> tuple[float, dict[str, int
     from game import BlackjackGame
 
     game = BlackjackGame()
-    old_epsilon = agent.epsilon
-    agent.epsilon = 0.0
+    has_epsilon = hasattr(agent, "epsilon")
+    old_epsilon = None
+    if has_epsilon:
+        old_epsilon = agent.epsilon
+        agent.epsilon = 0.0
 
     total_reward = 0.0
     distribution: dict[str, int] = defaultdict(int)
@@ -331,7 +339,8 @@ def evaluate_greedy(agent: Any, num_episodes: int) -> tuple[float, dict[str, int
         total_reward += reward
         distribution[categorize_reward(reward)] += 1
 
-    agent.epsilon = old_epsilon
+    if has_epsilon:
+        agent.epsilon = old_epsilon
     return total_reward / num_episodes, distribution
 
 

@@ -9,6 +9,7 @@ import torch.optim as optim
 from agents.common import (
     ACTION_LIST,
     ACTION_TO_INDEX,
+    HAND_FEATURE_COUNT,
     STATE_SIZE,
     Transition,
     encode_state,
@@ -60,6 +61,7 @@ class DoubleQNetworkLearningAgent:
         target_update_interval=NEURAL_TARGET_UPDATE_INTERVAL,
         min_replay_size=NEURAL_MIN_REPLAY_SIZE,
         train_updates_per_episode=NEURAL_TRAIN_UPDATES_PER_EPISODE,
+        hand_only_encoder: bool = False,
         device: Optional[str] = None,
     ):
         self.discount_factor = discount_factor
@@ -72,8 +74,9 @@ class DoubleQNetworkLearningAgent:
         self.target_update_interval = target_update_interval
         self.min_replay_size = min_replay_size
         self.train_updates_per_episode = train_updates_per_episode
+        self.hand_only_encoder = hand_only_encoder
 
-        self.input_size = STATE_SIZE
+        self.input_size = HAND_FEATURE_COUNT if hand_only_encoder else STATE_SIZE
         self.output_size = len(ACTION_LIST)
         self.device = resolve_torch_device(device)
 
@@ -89,10 +92,15 @@ class DoubleQNetworkLearningAgent:
 
         self.replay_buffer = deque(maxlen=replay_size)
         self.training_steps = 0
-        self.use_shoe_features = True
+        # Compact hand-only mode never uses shoe dims.
+        self.use_shoe_features = not hand_only_encoder
 
     def encode_state(self, state: GameState) -> torch.Tensor:
-        return encode_state(state, use_shoe_features=self.use_shoe_features)
+        return encode_state(
+            state,
+            use_shoe_features=self.use_shoe_features,
+            compact_hand_only=self.hand_only_encoder,
+        )
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]

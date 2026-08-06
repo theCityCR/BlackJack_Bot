@@ -78,6 +78,14 @@ ABLATION_CONDITION_B = "B_hand_only"
 ABLATION_CONDITION_C = "C_curriculum"
 ABLATION_CONDITION_D = "D_curriculum_warmstart"
 
+# Hand-only gap-close experiment: true 8-D encoder, long rule cloning, long RL.
+GAP_CLOSE_WARMSTART_EPISODES = 100_000
+GAP_CLOSE_TRAINING_EPISODES = 500_000
+GAP_CLOSE_EVAL_EPISODES = 25_000
+GAP_CLOSE_PRINT_INTERVAL = 25_000
+GAP_CLOSE_CHECKPOINT_EVAL_EPISODES = 500
+GAP_CLOSE_EPSILON_MIN = 0.01
+
 # =========================
 # Game Settings
 # =========================
