@@ -23,8 +23,8 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.setuptools]
-py-modules = ["cards", "config", "evaluate_agents", "game", "main"]
+py-modules = ["cards", "evaluate_agents", "game", "main"]
 
 [tool.setuptools.packages.find]
-include = ["agents*"]
+include = ["agents*", "config*"]
 namespaces = true

@@ -1,13 +1,7 @@
 """
-game.py
-
 Blackjack game environment.
 
-Supported player actions:
-- Hit
-- Stand
-- Double
-- Split
+Supported player actions: Hit, Stand, Double, Split.
 
 The deck is a persistent, finite multi-deck shoe by default.
 The agent receives the remaining-card count vector through GameState.
@@ -22,6 +16,7 @@ from config import (
     ALLOW_DOUBLE_AFTER_SPLIT,
     ALLOW_HIT_SPLIT_ACES,
     ALLOW_RESPLIT,
+    BLACKJACK_PAYOUT,
     DEALER_STAND_THRESHOLD,
     DOUBLE_REWARD_MULTIPLIER,
     MAX_PLAYER_HANDS,
@@ -31,7 +26,9 @@ from config import (
 )
 
 
-BLACKJACK_PAYOUT = 1.5
+# ---------------------------------------------------------------------------
+# Actions
+# ---------------------------------------------------------------------------
 
 
 class Action(Enum):
@@ -39,6 +36,11 @@ class Action(Enum):
     STAND = 1
     DOUBLE = 2
     SPLIT = 3
+
+
+# ---------------------------------------------------------------------------
+# Public / internal state
+# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,10 @@ class BlackjackGame:
         self.round_reward: Optional[float] = None
         self.initial_dealer_blackjack = False
 
+    # ------------------------------------------------------------------
+    # Compatibility properties
+    # ------------------------------------------------------------------
+
     @property
     def player_hands(self) -> List[Hand]:
         return [state.hand for state in self.hand_states]
@@ -132,6 +138,10 @@ class BlackjackGame:
     def split_aces(self) -> List[bool]:
         return self.is_split_aces_hand
 
+    # ------------------------------------------------------------------
+    # Reset
+    # ------------------------------------------------------------------
+
     def reset(self) -> Optional[GameState]:
         self.deck.reset()
 
@@ -153,8 +163,8 @@ class BlackjackGame:
         """
         Testing helper.
 
-        This creates fixed player/dealer hands without removing those cards
-        from the deck. Use this only for controlled tests, not normal training.
+        Creates fixed player/dealer hands without removing those cards from
+        the deck. Use only for controlled tests, not normal training.
         """
         self.deck.reset()
 
@@ -175,6 +185,10 @@ class BlackjackGame:
             return None
 
         return self.get_state()
+
+    # ------------------------------------------------------------------
+    # Observation and legal actions
+    # ------------------------------------------------------------------
 
     def get_state(self) -> GameState:
         self._require_started()
@@ -221,6 +235,10 @@ class BlackjackGame:
             actions.append(Action.SPLIT)
 
         return actions
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def step(self, action: Action) -> Tuple[Optional[GameState], float, bool]:
         if self.done:
@@ -279,6 +297,10 @@ class BlackjackGame:
 
     def current_hand(self) -> Hand:
         return self.current_hand_state().hand
+
+    # ------------------------------------------------------------------
+    # Action handlers
+    # ------------------------------------------------------------------
 
     def _hit(self) -> Tuple[Optional[GameState], float, bool]:
         hand_state = self.current_hand_state()
@@ -340,6 +362,10 @@ class BlackjackGame:
             return self.get_state(), 0.0, False
 
         return self._finish_round()
+
+    # ------------------------------------------------------------------
+    # Round resolution and rewards
+    # ------------------------------------------------------------------
 
     def _finish_round(self, dealer_already_resolved: bool = False) -> Tuple[None, float, bool]:
         if not dealer_already_resolved and self._dealer_should_play():
@@ -421,8 +447,9 @@ class BlackjackGame:
 
         return REWARD_DRAW
 
-    def _compare_hands(self) -> float:
-        return self._total_reward()
+    # ------------------------------------------------------------------
+    # Predicates and legality
+    # ------------------------------------------------------------------
 
     def _is_natural_blackjack(self, hand_state: PlayerHandState) -> bool:
         return not hand_state.is_split_hand and hand_state.hand.is_blackjack()
