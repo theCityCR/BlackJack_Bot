@@ -11,6 +11,7 @@ from agents.common import (
     STATE_SIZE,
     Transition,
     encode_state,
+    resolve_torch_device,
 )
 from config import (
     NEURAL_BATCH_SIZE,
@@ -56,6 +57,7 @@ class DeepQLearningAgent:
         target_update_interval=NEURAL_TARGET_UPDATE_INTERVAL,
         min_replay_size=NEURAL_MIN_REPLAY_SIZE,
         train_updates_per_episode=NEURAL_TRAIN_UPDATES_PER_EPISODE,
+        device=None,
     ):
         self.discount_factor = discount_factor
 
@@ -70,9 +72,10 @@ class DeepQLearningAgent:
 
         self.input_size = STATE_SIZE
         self.output_size = len(ACTION_LIST)
+        self.device = resolve_torch_device(device)
 
-        self.model = DQN(self.input_size, self.output_size)
-        self.target_model = DQN(self.input_size, self.output_size)
+        self.model = DQN(self.input_size, self.output_size).to(self.device)
+        self.target_model = DQN(self.input_size, self.output_size).to(self.device)
         self.target_model.load_state_dict(self.model.state_dict())
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -100,7 +103,7 @@ class DeepQLearningAgent:
         legal_indices = self.legal_action_indices(available_actions)
 
         with torch.no_grad():
-            state_tensor = self.encode_state(state).unsqueeze(0)
+            state_tensor = self.encode_state(state).unsqueeze(0).to(self.device)
             q_values = self.model(state_tensor)[0]
 
             masked_q_values = torch.full_like(q_values, float("-inf"))
@@ -142,9 +145,17 @@ class DeepQLearningAgent:
 
         batch = random.sample(self.replay_buffer, self.batch_size)
 
-        states = torch.stack([t.state for t in batch])
-        action_indices = torch.tensor([t.action_index for t in batch])
-        rewards = torch.tensor([t.reward for t in batch], dtype=torch.float32)
+        states = torch.stack([t.state for t in batch]).to(self.device)
+        action_indices = torch.tensor(
+            [t.action_index for t in batch],
+            dtype=torch.long,
+            device=self.device,
+        )
+        rewards = torch.tensor(
+            [t.reward for t in batch],
+            dtype=torch.float32,
+            device=self.device,
+        )
 
         current_q_values = self.model(states)
         current_q = current_q_values.gather(
@@ -159,7 +170,7 @@ class DeepQLearningAgent:
         if non_done_indices:
             next_states = torch.stack([
                 batch[i].next_state for i in non_done_indices
-            ])
+            ]).to(self.device)
 
             with torch.no_grad():
                 next_q_values = self.target_model(next_states)
@@ -178,7 +189,12 @@ class DeepQLearningAgent:
 
                 max_next_q = masked_next_q_values.max(dim=1).values
 
-            targets[non_done_indices] += self.discount_factor * max_next_q
+            non_done_tensor = torch.tensor(
+                non_done_indices,
+                dtype=torch.long,
+                device=self.device,
+            )
+            targets[non_done_tensor] += self.discount_factor * max_next_q
 
         loss = self.loss_fn(current_q, targets)
 
