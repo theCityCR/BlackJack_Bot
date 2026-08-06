@@ -35,9 +35,10 @@ def train(
     warmstart: bool | None = None,
     force_shoe_off: bool = False,
     learning_curve_path=None,
+    device: str | None = None,
 ) -> DoubleQNetworkLearningAgent:
     game = BlackjackGame()
-    agent = DoubleQNetworkLearningAgent(**neural_training_kwargs())
+    agent = DoubleQNetworkLearningAgent(**neural_training_kwargs(), device=device)
     run_neural_training_loop(
         agent,
         game,
@@ -58,6 +59,12 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=NEURAL_TRAINING_EPISODES)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
+        "--device",
+        default=None,
+        help="Torch device (cpu, mps, cuda). Default: CUDA if available else CPU. "
+        "MPS is opt-in (often slower for this workload).",
+    )
+    parser.add_argument(
         "--no-curriculum",
         action="store_true",
         help="Use full shoe features from episode 1 (skip hand-only phase A)",
@@ -74,6 +81,7 @@ def main() -> None:
         args.episodes,
         curriculum=False if args.no_curriculum else None,
         warmstart=False if args.no_warmstart else None,
+        device=args.device,
     )
 
     final_reward, final_distribution = evaluate_greedy(

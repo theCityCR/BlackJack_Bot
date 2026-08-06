@@ -84,6 +84,7 @@ def run_ablation_condition(
     smoke: bool = False,
     eval_episodes: int | None = None,
     ablation_base: Path | None = None,
+    device: str | None = None,
 ) -> dict[str, Any]:
     """Train one ablation condition and return a machine-readable summary row."""
     if condition_id not in ABLATION_CONDITIONS:
@@ -108,7 +109,7 @@ def run_ablation_condition(
 
     set_seed(seed)
     game = BlackjackGame()
-    agent = DoubleQNetworkLearningAgent(**neural_training_kwargs())
+    agent = DoubleQNetworkLearningAgent(**neural_training_kwargs(), device=device)
 
     loop_kwargs: dict[str, Any] = {
         "curriculum": spec["curriculum"],
@@ -198,6 +199,11 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--device",
+        default=None,
+        help="Torch device (cpu, mps, cuda). Default: CUDA if available else CPU.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=default_output_path(),
@@ -219,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
             smoke=args.smoke,
             eval_episodes=args.eval_episodes,
+            device=args.device,
         )
         results.append(row)
         print(

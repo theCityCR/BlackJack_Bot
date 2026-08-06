@@ -106,6 +106,33 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def resolve_torch_device(device: str | None = None) -> torch.device:
+    """Resolve the torch device for neural agents.
+
+    Precedence:
+    1. Explicit ``device`` argument
+    2. ``BLACKJACK_TORCH_DEVICE`` env var
+    3. CUDA if available
+    4. CPU
+
+    Apple MPS is supported when requested explicitly (``device="mps"`` or the
+    env var), but is not chosen automatically: for these small Blackjack DQN
+    batches, host↔MPS copies usually make training slower than CPU.
+    """
+    import os
+
+    if device is None:
+        device = os.environ.get("BLACKJACK_TORCH_DEVICE")
+
+    if device is not None:
+        return torch.device(device)
+
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+
+    return torch.device("cpu")
+
+
 def categorize_reward(reward: float) -> str:
     if reward == 0:
         return "draw"
@@ -184,6 +211,10 @@ def run_neural_training_loop(
     """
     from agents.learning_curves import LearningCurveLogger
     from agents.warmstart import warmstart_from_rule_agent
+
+    device = getattr(agent, "device", None)
+    if device is not None:
+        print(f"Training device: {device}")
 
     use_curriculum = (
         NEURAL_CURRICULUM_ENABLED if curriculum is None else curriculum

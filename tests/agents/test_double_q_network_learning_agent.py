@@ -281,7 +281,7 @@ def test_model_output_has_one_q_value_per_action():
     agent = DoubleQNetworkLearningAgent()
     state = make_state()
 
-    encoded = agent.encode_state(state).unsqueeze(0)
+    encoded = agent.encode_state(state).unsqueeze(0).to(agent.device)
     output = agent.model(encoded)
 
     assert output.shape == torch.Size([1, 4])

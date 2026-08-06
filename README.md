@@ -36,6 +36,8 @@ python3 scripts/run_ablation_double_dqn.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
+Neural agents run on **CUDA when available, otherwise CPU**. Apple **MPS** is supported via `--device mps` or `BLACKJACK_TORCH_DEVICE=mps`, but for these small DQN batches it is usually slower than CPU. Training logs print `Training device: …` at start.
+
 ## Layout
 
 ```text
