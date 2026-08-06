@@ -111,6 +111,24 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def episode_rng_seed(base_seed: int, episode_index: int) -> int:
+    """Deterministic per-episode seed for paired shoe comparisons."""
+    return (int(base_seed) + int(episode_index) * 1_000_003) & 0x7FFFFFFF
+
+
+def make_episode_game(base_seed: int, episode_index: int):
+    """Build a fresh game whose opening shoe is fixed by ``(base_seed, episode)``.
+
+    Comparison evals should call this (via ``evaluate_greedy(..., seed=...)``)
+    so every agent faces the same shuffled shoe for episode ``i``, while
+    different episode indices still get independent random shoes.
+    """
+    from game import BlackjackGame
+
+    set_seed(episode_rng_seed(base_seed, episode_index))
+    return BlackjackGame()
+
+
 def resolve_torch_device(device: str | None = None) -> torch.device:
     """Resolve the torch device for neural agents.
 
@@ -320,11 +338,22 @@ def run_neural_training_loop(
     return agent
 
 
-def evaluate_greedy(agent: Any, num_episodes: int) -> tuple[float, dict[str, int]]:
-    """Run greedy episodes and return mean reward plus outcome distribution."""
+def evaluate_greedy(
+    agent: Any,
+    num_episodes: int,
+    *,
+    seed: int | None = None,
+) -> tuple[float, dict[str, int]]:
+    """Run greedy episodes and return mean reward plus outcome distribution.
+
+    When ``seed`` is set, each episode ``i`` starts from a fresh shoe shuffled
+    under ``episode_rng_seed(seed, i)``. Re-running another agent with the same
+    ``seed`` and episode count yields a paired comparison (same decks per
+    episode index). When ``seed`` is ``None``, one persistent shoe is reused
+    across episodes (training mid-run probes).
+    """
     from game import BlackjackGame
 
-    game = BlackjackGame()
     has_epsilon = hasattr(agent, "epsilon")
     old_epsilon = None
     if has_epsilon:
@@ -333,8 +362,13 @@ def evaluate_greedy(agent: Any, num_episodes: int) -> tuple[float, dict[str, int
 
     total_reward = 0.0
     distribution: dict[str, int] = defaultdict(int)
+    persistent_game = None if seed is not None else BlackjackGame()
 
-    for _ in range(num_episodes):
+    for episode_index in range(num_episodes):
+        if seed is None:
+            game = persistent_game
+        else:
+            game = make_episode_game(seed, episode_index)
         reward = agent.play_episode(game)
         total_reward += reward
         distribution[categorize_reward(reward)] += 1

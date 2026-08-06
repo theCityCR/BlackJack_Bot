@@ -5,7 +5,7 @@ Protocol:
   - 8-D hand encoder (no shoe dims)
   - 100k rule-agent warm-start (behavior cloning)
   - 500k RL episodes, shoe features never enabled
-  - Greedy eval vs rule baseline on the same seed/episode count
+  - Final greedy eval vs rule baseline on paired per-episode shoes (same seed)
 """
 
 from __future__ import annotations
@@ -87,11 +87,9 @@ def run_gap_close(
     )
     save_torch_checkpoint(agent, model_path)
 
-    agent_reward, agent_dist = evaluate_greedy(agent, eval_episodes)
-
-    set_seed(seed)
+    agent_reward, agent_dist = evaluate_greedy(agent, eval_episodes, seed=seed)
     rule_agent = RuleAgent()
-    rule_reward, rule_dist = evaluate_greedy(rule_agent, eval_episodes)
+    rule_reward, rule_dist = evaluate_greedy(rule_agent, eval_episodes, seed=seed)
 
     summary = {
         "seed": seed,

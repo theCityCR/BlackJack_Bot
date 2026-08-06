@@ -88,6 +88,7 @@ def run_neural_train_main(
     final_reward, final_distribution = evaluate_greedy(
         agent,
         NEURAL_FINAL_EVAL_EPISODES,
+        seed=args.seed,
     )
     print(f"Final evaluation episodes: {NEURAL_FINAL_EVAL_EPISODES}")
     print(f"Final average reward:      {final_reward:.4f}")

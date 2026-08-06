@@ -170,7 +170,11 @@ def test_run_ablation_condition_smoke_wiring(
     assert kwargs["checkpoint_eval_episodes"] == ablation.SMOKE_CHECKPOINT_EVAL_EPISODES
 
     mock_save_checkpoint.assert_called_once()
-    mock_eval_greedy.assert_called_once_with(agent, ablation.SMOKE_FINAL_EVAL_EPISODES)
+    mock_eval_greedy.assert_called_once_with(
+        agent,
+        ablation.SMOKE_FINAL_EVAL_EPISODES,
+        seed=7,
+    )
 
     assert row["condition_id"] == ABLATION_CONDITION_C
     assert row["episodes"] == ablation.SMOKE_EPISODES

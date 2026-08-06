@@ -60,6 +60,7 @@ def main() -> None:
     final_reward, final_distribution = evaluate_greedy(
         agent,
         FINAL_EVALUATION_EPISODES,
+        seed=args.seed,
     )
     print(f"Saved Q-table to: {MODEL_PATH}")
     print()

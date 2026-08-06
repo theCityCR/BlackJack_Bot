@@ -118,7 +118,11 @@ def run_ablation_condition(
     run_neural_training_loop(agent, game, training_episodes, **loop_kwargs)
     save_torch_checkpoint(agent, model_path)
 
-    average_reward, distribution = evaluate_greedy(agent, final_eval_episodes)
+    average_reward, distribution = evaluate_greedy(
+        agent,
+        final_eval_episodes,
+        seed=seed,
+    )
     rates = distribution_to_rates(distribution)
 
     return {

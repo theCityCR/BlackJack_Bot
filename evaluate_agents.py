@@ -5,20 +5,18 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import random
 from pathlib import Path
 from typing import Any
 
 import torch
 
+from agents.common import agent_results_path, evaluate_greedy
 from agents.dqn import DeepQLearningAgent
 from agents.double_dqn import DoubleQNetworkLearningAgent
 from agents.dueling import DuelingDQNAgent
 from agents.prioritized import PrioritizedDuelingDQNAgent
 from agents.tabular_q import QLearningAgent
 from agents.rule import RuleAgent
-from agents.common import agent_results_path
-from game import BlackjackGame
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -73,20 +71,30 @@ def load_q_learning_agent(checkpoint_path: Path):
 
 
 def evaluate_agent(name: str, agent, episodes: int, seed: int) -> dict[str, Any]:
-    """Run one agent with a reproducible shoe sequence."""
-    random.seed(seed)
-    torch.manual_seed(seed)
-    game = BlackjackGame()
-    rewards = [agent.play_episode(game) for _ in range(episodes)]
+    """Run one agent on paired per-episode shoes for ``seed``."""
+    average_reward, distribution = evaluate_greedy(agent, episodes, seed=seed)
 
-    wins = sum(reward > 0 for reward in rewards)
-    losses = sum(reward < 0 for reward in rewards)
-    draws = episodes - wins - losses
+    wins = sum(
+        distribution.get(category, 0)
+        for category in (
+            "normal_win",
+            "blackjack_win",
+            "big_win_double_or_split",
+        )
+    )
+    losses = sum(
+        distribution.get(category, 0)
+        for category in (
+            "normal_loss",
+            "big_loss_double_or_split",
+        )
+    )
+    draws = distribution.get("draw", 0)
 
     return {
         "agent": name,
         "episodes": episodes,
-        "average_reward": round(sum(rewards) / episodes, 6),
+        "average_reward": round(average_reward, 6),
         "win_rate": round(wins / episodes, 6),
         "loss_rate": round(losses / episodes, 6),
         "draw_rate": round(draws / episodes, 6),
@@ -147,7 +155,7 @@ def write_svg(results: list[dict[str, Any]], path: Path) -> None:
 <rect width="100%" height="100%" fill="#ffffff"/>
 <style>text {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; fill: #1a202c; }}</style>
 <text x="30" y="35" font-size="22" font-weight="700">Average reward per round</text>
-<text x="30" y="58" fill="#4a5568">Higher is better; identical seed, rules, and episode count</text>
+<text x="30" y="58" fill="#4a5568">Higher is better; paired per-episode shoes, same seed and rules</text>
 <line x1="{zero_x}" y1="68" x2="{zero_x}" y2="{height - 25}" stroke="#718096" stroke-width="2"/>
 {''.join(rows)}
 </svg>
