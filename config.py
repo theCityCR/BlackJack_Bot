@@ -39,9 +39,10 @@ EPSILON_DECAY = 0.99999
 # remains an intentional experimental factor.
 
 NEURAL_TRAINING_EPISODES = 200_000
-NEURAL_CHECKPOINT_EVAL_EPISODES = 5_000
+# Sparse mid-run greedy probes keep wall-clock down; final eval stays large.
+NEURAL_CHECKPOINT_EVAL_EPISODES = 500
 NEURAL_FINAL_EVAL_EPISODES = 25_000
-NEURAL_PRINT_INTERVAL = 5_000
+NEURAL_PRINT_INTERVAL = 25_000
 
 NEURAL_LEARNING_RATE = 0.001
 NEURAL_DISCOUNT_FACTOR = 1.0
@@ -53,9 +54,9 @@ NEURAL_REPLAY_SIZE = 100_000
 NEURAL_BATCH_SIZE = 128
 NEURAL_TARGET_UPDATE_INTERVAL = 2_000
 NEURAL_MIN_REPLAY_SIZE = 1_000
-# Extra gradient steps per episode; greedy eval (not training reward) is the
-# published comparison metric.
-NEURAL_TRAIN_UPDATES_PER_EPISODE = 4
+# Two updates/episode is a speed/quality compromise vs 4 (final metric is still
+# greedy eval after the full episode budget).
+NEURAL_TRAIN_UPDATES_PER_EPISODE = 2
 
 # State curriculum: Phase A hand features only; Phase B full shoe-aware state.
 # Replay is cleared at the phase boundary so encodings stay consistent.
@@ -81,8 +82,8 @@ ABLATION_CONDITION_D = "D_curriculum_warmstart"
 GAP_CLOSE_WARMSTART_EPISODES = 100_000
 GAP_CLOSE_TRAINING_EPISODES = 500_000
 GAP_CLOSE_EVAL_EPISODES = 25_000
-GAP_CLOSE_PRINT_INTERVAL = 10_000
-GAP_CLOSE_CHECKPOINT_EVAL_EPISODES = 2_000
+GAP_CLOSE_PRINT_INTERVAL = 25_000
+GAP_CLOSE_CHECKPOINT_EVAL_EPISODES = 500
 GAP_CLOSE_EPSILON_MIN = 0.01
 
 # =========================

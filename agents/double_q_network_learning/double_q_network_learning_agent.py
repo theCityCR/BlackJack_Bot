@@ -1,5 +1,6 @@
 import random
 from collections import deque
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -12,6 +13,7 @@ from agents.common import (
     STATE_SIZE,
     Transition,
     encode_state,
+    resolve_torch_device,
 )
 from config import (
     NEURAL_BATCH_SIZE,
@@ -60,6 +62,7 @@ class DoubleQNetworkLearningAgent:
         min_replay_size=NEURAL_MIN_REPLAY_SIZE,
         train_updates_per_episode=NEURAL_TRAIN_UPDATES_PER_EPISODE,
         hand_only_encoder: bool = False,
+        device: Optional[str] = None,
     ):
         self.discount_factor = discount_factor
 
@@ -75,9 +78,12 @@ class DoubleQNetworkLearningAgent:
 
         self.input_size = HAND_FEATURE_COUNT if hand_only_encoder else STATE_SIZE
         self.output_size = len(ACTION_LIST)
+        self.device = resolve_torch_device(device)
 
-        self.model = DoubleQNetwork(self.input_size, self.output_size)
-        self.target_model = DoubleQNetwork(self.input_size, self.output_size)
+        self.model = DoubleQNetwork(self.input_size, self.output_size).to(self.device)
+        self.target_model = DoubleQNetwork(self.input_size, self.output_size).to(
+            self.device
+        )
         self.target_model.load_state_dict(self.model.state_dict())
         self.target_model.eval()
 
@@ -111,7 +117,7 @@ class DoubleQNetworkLearningAgent:
         legal_indices = self.legal_action_indices(available_actions)
 
         with torch.no_grad():
-            state_tensor = self.encode_state(state).unsqueeze(0)
+            state_tensor = self.encode_state(state).unsqueeze(0).to(self.device)
             q_values = self.model(state_tensor)[0]
 
             masked_q_values = torch.full_like(q_values, float("-inf"))
@@ -153,14 +159,16 @@ class DoubleQNetworkLearningAgent:
 
         batch = random.sample(self.replay_buffer, self.batch_size)
 
-        states = torch.stack([transition.state for transition in batch])
+        states = torch.stack([transition.state for transition in batch]).to(self.device)
         action_indices = torch.tensor(
             [transition.action_index for transition in batch],
             dtype=torch.long,
+            device=self.device,
         )
         rewards = torch.tensor(
             [transition.reward for transition in batch],
             dtype=torch.float32,
+            device=self.device,
         )
 
         current_q_values = self.model(states)
@@ -181,7 +189,7 @@ class DoubleQNetworkLearningAgent:
             next_states = torch.stack([
                 batch[index].next_state
                 for index in non_done_indices
-            ])
+            ]).to(self.device)
 
             with torch.no_grad():
                 # Double DQN:
@@ -208,9 +216,12 @@ class DoubleQNetworkLearningAgent:
                     best_next_action_indices.unsqueeze(1),
                 ).squeeze(1)
 
-            targets[non_done_indices] += (
-                self.discount_factor * double_dqn_next_q
+            non_done_tensor = torch.tensor(
+                non_done_indices,
+                dtype=torch.long,
+                device=self.device,
             )
+            targets[non_done_tensor] += self.discount_factor * double_dqn_next_q
 
         loss = self.loss_fn(current_q, targets)
 

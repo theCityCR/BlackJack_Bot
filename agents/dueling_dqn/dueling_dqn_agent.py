@@ -12,6 +12,7 @@ from agents.common import (
     STATE_SIZE,
     Transition,
     encode_state,
+    resolve_torch_device,
 )
 from config import (
     NEURAL_BATCH_SIZE,
@@ -89,12 +90,7 @@ class DuelingDQNAgent:
         self.input_size = STATE_SIZE
         self.output_size = len(ACTION_LIST)
 
-        if device is None:
-            self.device = torch.device(
-                "cuda" if torch.cuda.is_available() else "cpu"
-            )
-        else:
-            self.device = torch.device(device)
+        self.device = resolve_torch_device(device)
 
         self.model = DuelingDQN(self.input_size, self.output_size).to(self.device)
         self.target_model = DuelingDQN(self.input_size, self.output_size).to(self.device)
