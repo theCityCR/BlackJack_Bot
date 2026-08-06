@@ -1,0 +1,32 @@
+{
+  "provisional": true,
+  "source": "results/ablation_logs/gap_close.log (full run finished 2026-08-06)",
+  "notes": [
+    "Final greedy eval was unpaired (pre paired-per-episode-shoe change).",
+    "Working checkpoint under agents/results/double_dqn/gap_close/ was later overwritten by a smoke run; re-train under paired eval before treating as definitive.",
+    "Win/loss/draw rates for the 25k final eval were not logged; only average rewards and training steps are recorded here."
+  ],
+  "seed": 42,
+  "smoke": false,
+  "hand_only_encoder": true,
+  "state_size": 8,
+  "warmstart_episodes": 100000,
+  "train_episodes": 500000,
+  "eval_episodes": 25000,
+  "epsilon_min": 0.01,
+  "paired_eval": false,
+  "agent": {
+    "average_reward": -0.0248,
+    "training_steps": 1046535
+  },
+  "rule_baseline": {
+    "average_reward": -0.0103
+  },
+  "gap": -0.0145,
+  "protocol": {
+    "architecture": "Double DQN",
+    "encoder": "true 8-D hand-only",
+    "shoe_features": "off entire run",
+    "runner": "scripts/run_hand_only_gap_close.py"
+  }
+}

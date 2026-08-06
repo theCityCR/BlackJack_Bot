@@ -6,13 +6,18 @@ Protocol:
   - 100k rule-agent warm-start (behavior cloning)
   - 500k RL episodes, shoe features never enabled
   - Final greedy eval vs rule baseline on paired per-episode shoes (same seed)
+
+Artifact layout:
+  - Full runs write under ``agents/results/double_dqn/gap_close/``
+  - ``--smoke`` writes under ``.../gap_close_smoke/`` so CI cannot clobber a
+    full checkpoint. Overwriting an existing non-smoke summary requires
+    ``--force``.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from agents.common import (
@@ -36,7 +41,41 @@ from config import (
 )
 from game import BlackjackGame
 
-RESULTS_DIR = agent_results_path("double_dqn", "gap_close")
+FULL_RESULTS_DIR = agent_results_path("double_dqn", "gap_close")
+SMOKE_RESULTS_DIR = agent_results_path("double_dqn", "gap_close_smoke")
+SUMMARY_FILENAME = "gap_close_results.json"
+MODEL_FILENAME = "hand_only_gap_close_model.pt"
+
+
+def results_dir_for(*, smoke: bool) -> Path:
+    """Resolve the artifact directory for a smoke or full gap-close run."""
+    return SMOKE_RESULTS_DIR if smoke else FULL_RESULTS_DIR
+
+
+def guard_full_results_overwrite(results_dir: Path, *, force: bool) -> None:
+    """Refuse to clobber a previous non-smoke gap-close summary without --force."""
+    if results_dir.resolve() != FULL_RESULTS_DIR.resolve():
+        return
+
+    summary_path = results_dir / SUMMARY_FILENAME
+    if not summary_path.exists():
+        return
+
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+
+    if payload.get("smoke", True):
+        return
+    if force:
+        return
+
+    raise SystemExit(
+        f"Refusing to overwrite full gap-close artifacts in {results_dir}. "
+        "Re-run with --force if you intend to replace them, or keep using "
+        "--smoke (writes to gap_close_smoke/)."
+    )
 
 
 def run_gap_close(
@@ -46,6 +85,8 @@ def run_gap_close(
     train_episodes: int = GAP_CLOSE_TRAINING_EPISODES,
     eval_episodes: int = GAP_CLOSE_EVAL_EPISODES,
     smoke: bool = False,
+    force: bool = False,
+    results_dir: Path | None = None,
 ) -> dict:
     if smoke:
         warmstart_episodes = min(50, warmstart_episodes)
@@ -57,10 +98,14 @@ def run_gap_close(
         print_interval = GAP_CLOSE_PRINT_INTERVAL
         checkpoint_eval = GAP_CLOSE_CHECKPOINT_EVAL_EPISODES
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = RESULTS_DIR / "hand_only_gap_close_model.pt"
-    curve_path = RESULTS_DIR / NEURAL_LEARNING_CURVE_FILENAME
-    summary_path = RESULTS_DIR / "gap_close_results.json"
+    out_dir = results_dir if results_dir is not None else results_dir_for(smoke=smoke)
+    if results_dir is None:
+        guard_full_results_overwrite(out_dir, force=force)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    model_path = out_dir / MODEL_FILENAME
+    curve_path = out_dir / NEURAL_LEARNING_CURVE_FILENAME
+    summary_path = out_dir / SUMMARY_FILENAME
 
     set_seed(seed)
     kwargs = neural_training_kwargs()
@@ -70,7 +115,8 @@ def run_gap_close(
 
     print(
         f"Gap-close protocol: 8-D hand encoder, warmstart={warmstart_episodes}, "
-        f"train={train_episodes}, eval={eval_episodes}, seed={seed}"
+        f"train={train_episodes}, eval={eval_episodes}, seed={seed}, "
+        f"artifacts={out_dir}"
     )
 
     run_neural_training_loop(
@@ -145,7 +191,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--smoke",
         action="store_true",
-        help="Tiny episode counts for CI",
+        help="Tiny episode counts for CI (writes to gap_close_smoke/)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow overwriting an existing non-smoke gap_close/ summary",
     )
     args = parser.parse_args(argv)
     run_gap_close(
@@ -154,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         train_episodes=args.train_episodes,
         eval_episodes=args.eval_episodes,
         smoke=args.smoke,
+        force=args.force,
     )
     return 0
 

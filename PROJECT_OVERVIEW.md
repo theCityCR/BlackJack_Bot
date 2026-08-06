@@ -14,4 +14,4 @@ Finite-shoe Blackjack RL study. Start with:
 
 ## Future work
 
-Variable betting / bankroll, richer rule charts, configurable penetration, and optional actor-critic methods—after closing the flat-bet gap under the equalized protocol.
+Re-run hand-only gap-close under paired per-episode eval and replace the provisional §5.3 table. Then: variable betting / bankroll, richer rule charts, configurable penetration, and optional actor-critic methods—after flat-bet play is near the rule baseline.
