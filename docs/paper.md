@@ -4,7 +4,7 @@
 
 ## Abstract
 
-We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a **2-deck S17 DAS** rule baseline (~−1.0% EV in published tables). Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) improves further to about −2.5% EV but still trails the rule agent (~−1.0%). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
+We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a **2-deck S17 DAS** rule baseline. Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) reaches −0.0285 EV under paired eval but still trails the verified rule agent (−0.0034). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
 
 ## 1. Introduction
 
@@ -120,37 +120,32 @@ python3 scripts/plot_learning_curves.py docs/results/ablation/*/learning_curve.c
   --output docs/results/ablation_learning_curves.svg
 ```
 
-### 5.3 Hand-only gap-close (provisional)
+### 5.3 Hand-only gap-close (paired)
 
-Protocol: true **8-D** hand encoder, **100,000** rule warm-start episodes, **500,000** RL episodes with shoe features off the entire run (`scripts/run_hand_only_gap_close.py`, seed 42). Final greedy evaluation: **25,000** rounds.
+Protocol: true **8-D** hand encoder, **100,000** rule warm-start episodes, **500,000** RL episodes with shoe features off the entire run (`scripts/run_hand_only_gap_close.py`, seed 42). Final greedy evaluation: **25,000** rounds on **paired** per-episode shoes (agent and rule see the same shoe for episode \(i\)).
 
-| Agent | Avg reward | Training steps |
-|---|---:|---:|
-| Rule baseline | **−0.0103** | — |
-| Hand-only gap-close | −0.0248 | 1,046,535 |
-| Gap (agent − rule) | −0.0145 | — |
+| Agent | Avg reward | Win | Loss | Draw | Training steps |
+|---|---:|---:|---:|---:|---:|
+| Rule baseline (verified chart) | **−0.0034** | 43.3% | 48.1% | 8.6% | — |
+| Hand-only gap-close | −0.0285 | 42.1% | 48.8% | 9.1% | 1,047,085 |
+| Gap (agent − rule) | −0.0250 | — | — | — | — |
 
-Relative to equalized condition B (−0.0325), longer cloning + RL closes part of the remaining distance to the rule agent, but flat-bet play is still short of rule-baseline EV (~−1.0% vs −2.5%).
+Relative to equalized condition B (−0.0325), longer cloning + RL improves hand-only EV slightly (−0.0285), but the verified rule chart under the same paired shoes is much stronger (−0.0034) than the historical published baseline (−0.0103). Flat-bet play remains short of rule-baseline EV.
 
-**Provisional caveats (directional only).**
-- Averages come from the training log after the full run completed—not a checked-in checkpoint.
-- Final agent-vs-rule comparison used the **pre-paired** eval path (not identical per-episode shoes).
-- The working checkpoint under `agents/results/double_dqn/gap_close/` was later overwritten by a smoke run.
-- Rule EV in this table matches the published historical baseline (−0.0103); the in-repo rule policy has since been tightened to a verified 2-deck S17 DAS chart, so a future paired re-eval may move both sides slightly.
+Artifact note: [`docs/results/gap_close_results.json`](results/gap_close_results.json); learning curve [`docs/results/gap_close/learning_curve.csv`](results/gap_close/learning_curve.csv). Weights are saved locally at `agents/results/double_dqn/gap_close/hand_only_gap_close_model.pt` (gitignored); re-score without retraining via `--eval-only`. Smoke CI writes to `agents/results/double_dqn/gap_close_smoke/`. Standalone rule re-eval: [`docs/results/rule_baseline_paired.json`](results/rule_baseline_paired.json).
 
-Artifact note: [`docs/results/gap_close_results.json`](results/gap_close_results.json). Smoke CI writes to `agents/results/double_dqn/gap_close_smoke/`; full runs refuse to overwrite a prior non-smoke summary unless `--force` is set. Trainers accept `--seeds 42,43,…` for multi-seed scaffolding (writes `seed_<n>/` subdirs); that matrix has **not** been run for publication.
-
-Reproduce (paired eval; replaces the provisional table when finished):
+Reproduce:
 
 ```bash
 python3 scripts/run_hand_only_gap_close.py --seed 42
+# later, without retraining:
+python3 scripts/run_hand_only_gap_close.py --seed 42 --eval-only
 ```
-
 ## 6. Discussion
 
-Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin. Curriculum and rule warm-start help relative to A, but under a 200k-episode budget the best learned policy remains hand-only—still short of the rule baseline (~−1.0% vs −3.3% EV). The provisional gap-close (§5.3) shows that more imitation and hand-only RL improve further (~−2.5%), yet still do not match the rule agent under this protocol.
+Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin. Curriculum and rule warm-start help relative to A, but under a 200k-episode budget the best learned policy remains hand-only—still short of the rule baseline (~−1.0% vs −3.3% EV in the historical §5.2 table). The paired gap-close (§5.3) improves hand-only further (−0.0285) yet widens the absolute gap to the **verified** rule chart (−0.0034 under the same shoes), confirming that longer imitation + RL alone does not match basic strategy under this protocol.
 
-**Limitations.** Flat betting only; no insurance/surrender. Published rule EV rows (−0.0103) and warm-start clones reflect the **pre-tighten** baseline; the current `RuleAgent` encodes a verified 2-deck S17 DAS chart for future runs and has not yet been re-benchmarked into `docs/results/`. Ablation and gap-close tables are single-seed (42); `--seeds` CLI scaffolding exists but the multi-seed matrix is unpublished. Gap-close §5.3 is provisional (unpaired final eval; checkpoint not retained). Variable betting is design-only ([`docs/design_variable_betting.md`](design_variable_betting.md))—positive EV vs the house is future work, not the claim of this study.
+**Limitations.** Flat betting only; no insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Ablation and gap-close tables are single-seed (42); `--seeds` CLI scaffolding exists but the multi-seed matrix is unpublished. Warm-start clones in the equalized ablation still reflect the pre-tighten chart. Variable betting is design-only ([`docs/design_variable_betting.md`](design_variable_betting.md))—positive EV vs the house is future work, not the claim of this study.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 

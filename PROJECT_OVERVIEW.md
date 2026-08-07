@@ -15,8 +15,8 @@ Finite-shoe Blackjack RL study. Start with:
 
 ## Future work
 
-1. Re-run hand-only gap-close under paired eval and replace provisional §5.3.
-2. Re-eval the rule baseline (and warm-start clones) after the chart tighten; published −0.0103 rows are historical.
+1. ~~Re-run hand-only gap-close under paired eval and replace provisional §5.3.~~ Done (`docs/results/gap_close_results.json`).
+2. ~~Re-eval the rule baseline after the chart tighten.~~ Done (−0.0034 paired; `docs/results/rule_baseline_paired.json`). Warm-start clones in the equalized ablation still use the historical chart until A–D are re-run.
 3. Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.
 4. Variable betting / bankroll — see [docs/design_variable_betting.md](docs/design_variable_betting.md) (design only until flat-bet ≈ rule).
 5. Configurable penetration and optional actor-critic methods as later follow-ons.

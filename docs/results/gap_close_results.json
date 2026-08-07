@@ -1,12 +1,4 @@
 {
-  "provisional": true,
-  "source": "results/ablation_logs/gap_close.log (full run finished 2026-08-06)",
-  "notes": [
-    "Final greedy eval was unpaired (pre paired-per-episode-shoe change).",
-    "Working checkpoint under agents/results/double_dqn/gap_close/ was later overwritten by a smoke run; re-train under paired eval before treating as definitive.",
-    "Win/loss/draw rates for the 25k final eval were not logged; only average rewards and training steps are recorded here.",
-    "Rule EV −0.0103 is the historical published baseline; RuleAgent is now a verified 2-deck S17 DAS chart pending re-eval."
-  ],
   "seed": 42,
   "smoke": false,
   "hand_only_encoder": true,
@@ -15,19 +7,51 @@
   "train_episodes": 500000,
   "eval_episodes": 25000,
   "epsilon_min": 0.01,
-  "paired_eval": false,
+  "paired_eval": true,
+  "trained": true,
   "agent": {
-    "average_reward": -0.0248,
-    "training_steps": 1046535
+    "average_reward": -0.02848,
+    "training_steps": 1047085,
+    "distribution": {
+      "normal_loss": 10575,
+      "normal_win": 7310,
+      "draw": 2279,
+      "big_loss_double_or_split": 1631,
+      "blackjack_win": 1168,
+      "big_win_double_or_split": 2037
+    },
+    "win_rate": 0.4206,
+    "loss_rate": 0.48824,
+    "draw_rate": 0.09116
   },
   "rule_baseline": {
-    "average_reward": -0.0103
+    "average_reward": -0.00344,
+    "distribution": {
+      "normal_loss": 10879,
+      "normal_win": 8034,
+      "draw": 2141,
+      "big_loss_double_or_split": 1143,
+      "blackjack_win": 1168,
+      "big_win_double_or_split": 1635
+    },
+    "win_rate": 0.43348,
+    "loss_rate": 0.48088,
+    "draw_rate": 0.08564
   },
-  "gap": -0.0145,
+  "gap": -0.02504,
+  "model_path": "agents/results/double_dqn/gap_close/hand_only_gap_close_model.pt",
+  "learning_curve_path": "docs/results/gap_close/learning_curve.csv",
+  "provisional": false,
   "protocol": {
     "architecture": "Double DQN",
     "encoder": "true 8-D hand-only",
     "shoe_features": "off entire run",
+    "paired_eval": true,
     "runner": "scripts/run_hand_only_gap_close.py"
-  }
+  },
+  "notes": [
+    "Paired per-episode shoes for agent and rule (seed 42, 25k eval).",
+    "Checkpoint retained at agents/results/double_dqn/gap_close/hand_only_gap_close_model.pt (gitignored); re-eval with --eval-only.",
+    "Rule EV uses the verified 2-deck S17 DAS chart (see also docs/results/rule_baseline_paired.json)."
+  ]
 }
