@@ -222,5 +222,12 @@ def test_main_multi_seed_writes_seed_subdirs(
     assert exit_code == 0
     assert (tmp_path / "smoke" / "seed_3" / "gap_close_results.json").exists()
     assert (tmp_path / "smoke" / "seed_4" / "gap_close_results.json").exists()
-    assert (tmp_path / "smoke" / "multi_seed_gap_close_results.json").exists()
+    aggregate_path = tmp_path / "smoke" / "multi_seed_gap_close_results.json"
+    assert aggregate_path.exists()
+    payload = json.loads(aggregate_path.read_text(encoding="utf-8"))
+    assert payload["seeds"] == [3, 4]
+    assert "summary" in payload
+    assert payload["summary"]["n_seeds"] == 2
+    assert "agent_average_reward" in payload["summary"]
+    assert "gap" in payload["summary"]
     assert not (tmp_path / "full").exists() or not any((tmp_path / "full").iterdir())

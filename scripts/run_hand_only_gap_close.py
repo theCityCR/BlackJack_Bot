@@ -22,7 +22,12 @@ import argparse
 import json
 from pathlib import Path
 
-from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
+from agents.cli_seeds import (
+    add_seed_arguments,
+    seed_artifact_dir,
+    seeds_from_args,
+    summarize_gap_close_runs,
+)
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
@@ -338,23 +343,25 @@ def main(argv: list[str] | None = None) -> int:
         summaries.append(summary)
 
     if multi:
+        runs = [
+            {
+                "seed": row["seed"],
+                "gap": row["gap"],
+                "agent_average_reward": row["agent"]["average_reward"],
+                "rule_average_reward": row["rule_baseline"]["average_reward"],
+                "model_path": row["model_path"],
+                "learning_curve_path": row["learning_curve_path"],
+            }
+            for row in summaries
+        ]
         aggregate_path = base / "multi_seed_gap_close_results.json"
         aggregate_path.write_text(
             json.dumps(
                 {
                     "seeds": seeds,
                     "smoke": args.smoke,
-                    "runs": [
-                        {
-                            "seed": row["seed"],
-                            "gap": row["gap"],
-                            "agent_average_reward": row["agent"]["average_reward"],
-                            "rule_average_reward": row["rule_baseline"]["average_reward"],
-                            "model_path": row["model_path"],
-                            "learning_curve_path": row["learning_curve_path"],
-                        }
-                        for row in summaries
-                    ],
+                    "runs": runs,
+                    "summary": summarize_gap_close_runs(runs, seeds),
                 },
                 indent=2,
             )

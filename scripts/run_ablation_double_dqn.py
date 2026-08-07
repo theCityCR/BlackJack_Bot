@@ -9,7 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
+from agents.cli_seeds import (
+    add_seed_arguments,
+    seed_artifact_dir,
+    seeds_from_args,
+    summarize_ablation_runs,
+)
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
@@ -283,9 +288,10 @@ def main(argv: list[str] | None = None) -> int:
             seeds=seeds,
             smoke=args.smoke,
         )
-        # Attach per-seed path index for scaffolding consumers.
+        # Attach per-seed path index and mean/std summary for consumers.
         payload = json.loads(Path(aggregate_path).read_text(encoding="utf-8"))
         payload["per_seed"] = per_seed_paths
+        payload["summary"] = summarize_ablation_runs(all_results, seeds)
         Path(aggregate_path).write_text(
             json.dumps(payload, indent=2) + "\n", encoding="utf-8"
         )

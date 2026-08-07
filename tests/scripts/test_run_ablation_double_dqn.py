@@ -284,4 +284,11 @@ def test_main_multi_seed_uses_seed_subdirs(mock_run_condition, tmp_path: Path, m
     assert first_base == tmp_path / "seed_11"
     assert second_base == tmp_path / "seed_12"
     assert (tmp_path / "seed_11" / "ablation_results.json").exists()
-    assert (tmp_path / "multi_seed_ablation_results.json").exists()
+    aggregate_path = tmp_path / "multi_seed_ablation_results.json"
+    assert aggregate_path.exists()
+    payload = json.loads(aggregate_path.read_text(encoding="utf-8"))
+    assert "summary" in payload
+    assert payload["summary"]["n_seeds"] == 2
+    assert payload["summary"]["conditions"][0]["condition_id"] == ABLATION_CONDITION_A
+    assert "average_reward" in payload["summary"]["conditions"][0]
+    assert "per_seed" in payload

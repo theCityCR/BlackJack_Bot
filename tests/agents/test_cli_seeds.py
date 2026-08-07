@@ -9,9 +9,13 @@ import pytest
 
 from agents.cli_seeds import (
     add_seed_arguments,
+    metric_stats,
     parse_seeds,
     seed_artifact_dir,
     seeds_from_args,
+    summarize_ablation_runs,
+    summarize_benchmark_runs,
+    summarize_gap_close_runs,
 )
 
 
@@ -43,3 +47,108 @@ def test_seeds_from_args_prefers_seeds_flag():
     add_seed_arguments(parser)
     args = parser.parse_args(["--seed", "1", "--seeds", "2,3"])
     assert seeds_from_args(args) == [2, 3]
+
+
+def test_metric_stats_single_value_has_zero_std():
+    assert metric_stats([1.5]) == {
+        "mean": 1.5,
+        "std": 0.0,
+        "n": 1,
+        "min": 1.5,
+        "max": 1.5,
+    }
+
+
+def test_metric_stats_sample_std():
+    stats = metric_stats([1.0, 3.0])
+    assert stats["mean"] == 2.0
+    assert stats["std"] == pytest.approx(2**0.5)
+    assert stats["n"] == 2
+    assert stats["min"] == 1.0
+    assert stats["max"] == 3.0
+
+
+def test_metric_stats_rejects_empty():
+    with pytest.raises(ValueError, match="non-empty"):
+        metric_stats([])
+
+
+def test_summarize_ablation_runs_groups_by_condition():
+    rows = [
+        {
+            "condition_id": "A_full_scratch",
+            "label": "Full from scratch",
+            "average_reward": -0.08,
+            "win_rate": 0.41,
+            "loss_rate": 0.50,
+            "draw_rate": 0.09,
+        },
+        {
+            "condition_id": "A_full_scratch",
+            "label": "Full from scratch",
+            "average_reward": -0.10,
+            "win_rate": 0.40,
+            "loss_rate": 0.51,
+            "draw_rate": 0.09,
+        },
+        {
+            "condition_id": "B_hand_only",
+            "label": "Hand-only",
+            "average_reward": -0.03,
+            "win_rate": 0.42,
+            "loss_rate": 0.49,
+            "draw_rate": 0.09,
+        },
+    ]
+    summary = summarize_ablation_runs(rows, seeds=[42, 43])
+    assert summary["n_seeds"] == 2
+    assert summary["seeds"] == [42, 43]
+    by_id = {row["condition_id"]: row for row in summary["conditions"]}
+    assert by_id["A_full_scratch"]["average_reward"]["mean"] == pytest.approx(-0.09)
+    assert by_id["A_full_scratch"]["n_seeds"] == 2
+    assert by_id["B_hand_only"]["average_reward"]["mean"] == pytest.approx(-0.03)
+    assert by_id["B_hand_only"]["average_reward"]["std"] == 0.0
+
+
+def test_summarize_gap_close_runs():
+    rows = [
+        {
+            "seed": 42,
+            "gap": -0.02,
+            "agent_average_reward": -0.03,
+            "rule_average_reward": -0.01,
+        },
+        {
+            "seed": 43,
+            "gap": -0.04,
+            "agent_average_reward": -0.05,
+            "rule_average_reward": -0.01,
+        },
+    ]
+    summary = summarize_gap_close_runs(rows, seeds=[42, 43])
+    assert summary["gap"]["mean"] == pytest.approx(-0.03)
+    assert summary["agent_average_reward"]["n"] == 2
+    assert summary["rule_average_reward"]["mean"] == pytest.approx(-0.01)
+
+
+def test_summarize_benchmark_runs():
+    aggregate = [
+        {
+            "seed": 1,
+            "results": [
+                {"agent": "Rule-based", "average_reward": -0.01},
+                {"agent": "Double DQN", "average_reward": -0.04},
+            ],
+        },
+        {
+            "seed": 2,
+            "results": [
+                {"agent": "Rule-based", "average_reward": -0.02},
+                {"agent": "Double DQN", "average_reward": -0.06},
+            ],
+        },
+    ]
+    summary = summarize_benchmark_runs(aggregate, seeds=[1, 2])
+    by_name = {row["agent"]: row for row in summary["agents"]}
+    assert by_name["Rule-based"]["average_reward"]["mean"] == pytest.approx(-0.015)
+    assert by_name["Double DQN"]["average_reward"]["mean"] == pytest.approx(-0.05)

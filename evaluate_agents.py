@@ -8,7 +8,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
+from agents.cli_seeds import (
+    add_seed_arguments,
+    seed_artifact_dir,
+    seeds_from_args,
+    summarize_benchmark_runs,
+)
 from agents.common import agent_results_path, evaluate_greedy, load_torch_checkpoint
 from agents.dqn import DeepQLearningAgent
 from agents.double_dqn import DoubleQNetworkLearningAgent
@@ -234,7 +239,15 @@ def main() -> None:
         summary_path = args.output_dir / "multi_seed_benchmark_results.json"
         args.output_dir.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps({"seeds": seeds, "runs": aggregate}, indent=2) + "\n",
+            json.dumps(
+                {
+                    "seeds": seeds,
+                    "runs": aggregate,
+                    "summary": summarize_benchmark_runs(aggregate, seeds),
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         print(f"Wrote multi-seed aggregate to {summary_path}")
