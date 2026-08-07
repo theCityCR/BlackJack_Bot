@@ -82,13 +82,13 @@ def test_evaluate_greedy_without_seed_reuses_persistent_game():
     assert len(game_ids) == 6
     assert len(set(game_ids)) == 1
 
-    paired_ids: list[int] = []
 
-    class PairedTrackingAgent(RuleAgent):
-        def play_episode(self, game, render: bool = False) -> float:
-            paired_ids.append(id(game))
-            return super().play_episode(game, render=render)
+def test_evaluate_greedy_with_seed_uses_fresh_shoe_per_episode(monkeypatch):
+    """Paired eval builds a new opening shoe for each episode index.
 
-    evaluate_greedy(PairedTrackingAgent(), 6, seed=5)
-    assert len(paired_ids) == 6
-    assert len(set(paired_ids)) == 6
+    Do not assert unique ``id(game)``: CPython may recycle object ids after GC.
+    """
+    shoes = _track_force_resets(monkeypatch)
+    evaluate_greedy(RuleAgent(), 6, seed=5)
+    assert len(shoes) == 6
+    assert len(set(shoes)) == 6
