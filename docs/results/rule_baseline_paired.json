@@ -1,0 +1,19 @@
+{
+  "seed": 42,
+  "episodes": 25000,
+  "paired_eval": true,
+  "chart": "verified 2-deck S17 DAS",
+  "average_reward": -0.00344,
+  "win_rate": 0.43348,
+  "loss_rate": 0.48088,
+  "draw_rate": 0.08564,
+  "distribution": {
+    "normal_loss": 10879,
+    "normal_win": 8034,
+    "draw": 2141,
+    "big_loss_double_or_split": 1143,
+    "blackjack_win": 1168,
+    "big_win_double_or_split": 1635
+  },
+  "note": "Replaces historical published rule EV (-0.0103) for paired-shoe comparisons."
+}
