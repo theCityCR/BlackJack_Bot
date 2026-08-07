@@ -151,6 +151,8 @@ def test_gap_close_eval_only_skips_training(
     assert summary["warmstart_episodes"] == 100
     assert summary["train_episodes"] == 500
     assert summary["agent"]["training_steps"] == 1234
+    assert (tmp_path / gap_close.EVAL_ONLY_SUMMARY_FILENAME).exists()
+    assert not (tmp_path / gap_close.SUMMARY_FILENAME).exists()
 
 
 @patch.object(gap_close, "save_torch_checkpoint")

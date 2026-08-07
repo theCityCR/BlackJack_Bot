@@ -48,6 +48,7 @@ from game import BlackjackGame
 FULL_RESULTS_DIR = agent_results_path("double_dqn", "gap_close")
 SMOKE_RESULTS_DIR = agent_results_path("double_dqn", "gap_close_smoke")
 SUMMARY_FILENAME = "gap_close_results.json"
+EVAL_ONLY_SUMMARY_FILENAME = "gap_close_eval_results.json"
 MODEL_FILENAME = "hand_only_gap_close_model.pt"
 
 
@@ -179,7 +180,10 @@ def run_gap_close(
     out_dir.mkdir(parents=True, exist_ok=True)
     model_path = out_dir / MODEL_FILENAME
     curve_path = out_dir / NEURAL_LEARNING_CURVE_FILENAME
-    summary_path = out_dir / SUMMARY_FILENAME
+    # Keep the training summary intact when re-scoring with --eval-only.
+    summary_path = out_dir / (
+        EVAL_ONLY_SUMMARY_FILENAME if eval_only else SUMMARY_FILENAME
+    )
 
     if eval_only:
         if not model_path.exists():
