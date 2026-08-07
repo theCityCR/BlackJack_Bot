@@ -231,3 +231,43 @@ def test_main_multi_seed_writes_seed_subdirs(
     assert "agent_average_reward" in payload["summary"]
     assert "gap" in payload["summary"]
     assert not (tmp_path / "full").exists() or not any((tmp_path / "full").iterdir())
+
+
+@patch.object(gap_close, "run_gap_close")
+def test_main_resume_skips_finished_seed(mock_run_gap_close, tmp_path: Path, monkeypatch):
+    smoke = tmp_path / "smoke"
+    seed3 = smoke / "seed_3"
+    seed3.mkdir(parents=True)
+    (seed3 / gap_close.MODEL_FILENAME).write_bytes(b"stub")
+    (seed3 / gap_close.SUMMARY_FILENAME).write_text(
+        json.dumps(
+            {
+                "seed": 3,
+                "gap": -0.01,
+                "agent": {"average_reward": -0.02},
+                "rule_baseline": {"average_reward": -0.01},
+                "model_path": str(seed3 / gap_close.MODEL_FILENAME),
+                "learning_curve_path": str(seed3 / "learning_curve.csv"),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gap_close, "SMOKE_RESULTS_DIR", smoke)
+    monkeypatch.setattr(gap_close, "FULL_RESULTS_DIR", tmp_path / "full")
+    mock_run_gap_close.return_value = {
+        "seed": 4,
+        "gap": -0.03,
+        "agent": {"average_reward": -0.04},
+        "rule_baseline": {"average_reward": -0.01},
+        "model_path": str(smoke / "seed_4" / gap_close.MODEL_FILENAME),
+        "learning_curve_path": str(smoke / "seed_4" / "learning_curve.csv"),
+    }
+
+    exit_code = gap_close.main(["--smoke", "--seeds", "3,4", "--resume"])
+    assert exit_code == 0
+    mock_run_gap_close.assert_called_once()
+    assert mock_run_gap_close.call_args.kwargs["seed"] == 4
+    payload = json.loads((smoke / "multi_seed_gap_close_results.json").read_text())
+    assert payload["summary"]["n_seeds"] == 2
+    assert len(payload["runs"]) == 2

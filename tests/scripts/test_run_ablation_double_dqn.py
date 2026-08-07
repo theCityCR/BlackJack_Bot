@@ -180,7 +180,49 @@ def test_run_ablation_condition_smoke_wiring(
     assert row["episodes"] == ablation.SMOKE_EPISODES
     assert row["eval_episodes"] == ablation.SMOKE_FINAL_EVAL_EPISODES
     assert row["training_steps"] == 123
+    assert row["resumed"] is False
     assert (tmp_path / ABLATION_CONDITION_C / "model.pt").as_posix() in row["model_path"]
+
+
+@patch.object(ablation, "evaluate_greedy")
+@patch.object(ablation, "load_torch_checkpoint")
+@patch.object(ablation, "run_neural_training_loop")
+@patch.object(ablation, "save_torch_checkpoint")
+def test_run_ablation_condition_resume_skips_training(
+    mock_save_checkpoint,
+    mock_run_loop,
+    mock_load_checkpoint,
+    mock_eval_greedy,
+    tmp_path: Path,
+):
+    condition_dir = tmp_path / ABLATION_CONDITION_B
+    condition_dir.mkdir(parents=True)
+    model_path = condition_dir / "model.pt"
+    model_path.write_bytes(b"stub")
+
+    agent = MagicMock()
+    agent.training_steps = 999
+    mock_load_checkpoint.return_value = (agent, {})
+    mock_eval_greedy.return_value = (
+        -0.02,
+        {"normal_win": 40, "normal_loss": 50, "draw": 10},
+    )
+
+    row = ablation.run_ablation_condition(
+        ABLATION_CONDITION_B,
+        episodes=200_000,
+        seed=42,
+        smoke=True,
+        ablation_base=tmp_path,
+        resume=True,
+    )
+
+    mock_run_loop.assert_not_called()
+    mock_save_checkpoint.assert_not_called()
+    mock_load_checkpoint.assert_called_once()
+    assert row["resumed"] is True
+    assert row["average_reward"] == -0.02
+    assert agent.use_shoe_features is False
 
 
 @patch.object(ablation, "run_ablation_condition")

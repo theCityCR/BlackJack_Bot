@@ -18,6 +18,7 @@ from agents.cli_seeds import (
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
+    load_torch_checkpoint,
     neural_training_kwargs,
     run_neural_training_loop,
     save_torch_checkpoint,
@@ -86,8 +87,13 @@ def run_ablation_condition(
     eval_episodes: int | None = None,
     ablation_base: Path | None = None,
     device: str | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
-    """Train one ablation condition and return a machine-readable summary row."""
+    """Train one ablation condition and return a machine-readable summary row.
+
+    With ``resume=True``, an existing ``model.pt`` skips training and only
+    re-runs the final greedy eval (for pause/continue workflows).
+    """
     if condition_id not in ABLATION_CONDITIONS:
         raise KeyError(f"Unknown ablation condition: {condition_id}")
 
@@ -108,21 +114,34 @@ def run_ablation_condition(
     model_path = condition_dir / "model.pt"
     curve_path = condition_dir / NEURAL_LEARNING_CURVE_FILENAME
 
-    set_seed(seed)
-    game = BlackjackGame()
-    agent = DoubleQNetworkLearningAgent(**neural_training_kwargs(), device=device)
+    resumed = False
+    if resume and model_path.is_file():
+        print(f"Resume: loading existing checkpoint {model_path}")
+        agent, _checkpoint = load_torch_checkpoint(
+            DoubleQNetworkLearningAgent,
+            model_path,
+            device=device if device is not None else "cpu",
+            **neural_training_kwargs(),
+        )
+        if spec["force_shoe_off"]:
+            agent.use_shoe_features = False
+        resumed = True
+    else:
+        set_seed(seed)
+        game = BlackjackGame()
+        agent = DoubleQNetworkLearningAgent(**neural_training_kwargs(), device=device)
 
-    loop_kwargs: dict[str, Any] = {
-        "curriculum": spec["curriculum"],
-        "warmstart": spec["warmstart"],
-        "force_shoe_off": spec["force_shoe_off"],
-        "learning_curve_path": curve_path,
-    }
-    if smoke:
-        loop_kwargs.update(smoke_loop_kwargs(training_episodes))
+        loop_kwargs: dict[str, Any] = {
+            "curriculum": spec["curriculum"],
+            "warmstart": spec["warmstart"],
+            "force_shoe_off": spec["force_shoe_off"],
+            "learning_curve_path": curve_path,
+        }
+        if smoke:
+            loop_kwargs.update(smoke_loop_kwargs(training_episodes))
 
-    run_neural_training_loop(agent, game, training_episodes, **loop_kwargs)
-    save_torch_checkpoint(agent, model_path)
+        run_neural_training_loop(agent, game, training_episodes, **loop_kwargs)
+        save_torch_checkpoint(agent, model_path)
 
     average_reward, distribution = evaluate_greedy(
         agent,
@@ -147,6 +166,7 @@ def run_ablation_condition(
         "force_shoe_off": spec["force_shoe_off"],
         "model_path": str(model_path),
         "learning_curve_path": str(curve_path),
+        "resumed": resumed,
     }
 
 
@@ -216,6 +236,14 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="JSON path for the ablation summary (default: under ablation base)",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Skip training when condition_dir/model.pt already exists; "
+            "reload weights and re-run final greedy eval only"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -250,6 +278,7 @@ def main(argv: list[str] | None = None) -> int:
                 eval_episodes=args.eval_episodes,
                 ablation_base=seed_base,
                 device=args.device,
+                resume=args.resume,
             )
             results.append(row)
             all_results.append(row)

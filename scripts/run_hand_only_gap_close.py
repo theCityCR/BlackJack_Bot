@@ -315,11 +315,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip training; load hand_only_gap_close_model.pt and re-run paired eval",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Skip seeds that already have gap_close_results.json and a model "
+            "checkpoint (for pause/continue multi-seed runs)"
+        ),
+    )
     args = parser.parse_args(argv)
     try:
         seeds = seeds_from_args(args)
     except ValueError as exc:
         parser.error(str(exc))
+
+    if args.resume and args.eval_only:
+        parser.error("--resume and --eval-only are mutually exclusive")
 
     multi = len(seeds) > 1
     base = results_dir_for(smoke=args.smoke)
@@ -327,6 +338,16 @@ def main(argv: list[str] | None = None) -> int:
 
     for seed in seeds:
         out_dir = seed_artifact_dir(base, seed, multi=multi)
+        summary_path = out_dir / SUMMARY_FILENAME
+        model_path = out_dir / MODEL_FILENAME
+        if (
+            args.resume
+            and summary_path.is_file()
+            and model_path.is_file()
+        ):
+            print(f"Resume: skipping seed={seed} (found {summary_path})")
+            summaries.append(json.loads(summary_path.read_text(encoding="utf-8")))
+            continue
         # Only guard the legacy single-seed full path when training.
         if not multi and not args.smoke and not args.eval_only:
             guard_full_results_overwrite(out_dir, force=args.force)
