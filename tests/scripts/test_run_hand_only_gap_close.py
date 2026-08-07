@@ -109,6 +109,48 @@ def test_gap_close_final_evals_share_seed(
     assert second_call.args[1] == first_call.args[1]
     assert second_call.kwargs == {"seed": 17}
     assert summary["seed"] == 17
+    assert summary["paired_eval"] is True
+    assert summary["trained"] is True
+
+
+@patch.object(gap_close, "load_torch_checkpoint")
+@patch.object(gap_close, "evaluate_greedy")
+@patch.object(gap_close, "run_neural_training_loop")
+@patch.object(gap_close, "save_torch_checkpoint")
+def test_gap_close_eval_only_skips_training(
+    mock_save_checkpoint,
+    mock_run_loop,
+    mock_eval_greedy,
+    mock_load_checkpoint,
+    tmp_path: Path,
+):
+    model_path = tmp_path / gap_close.MODEL_FILENAME
+    model_path.write_bytes(b"stub")
+    agent = MagicMock()
+    agent.input_size = 8
+    agent.training_steps = 1234
+    mock_load_checkpoint.return_value = (
+        agent,
+        {"warmstart_episodes": 100, "train_episodes": 500},
+    )
+    mock_eval_greedy.return_value = (-0.02, {"normal_win": 1, "normal_loss": 1})
+
+    summary = run_gap_close(
+        seed=7,
+        smoke=True,
+        eval_only=True,
+        results_dir=tmp_path,
+        eval_episodes=200,
+    )
+
+    mock_run_loop.assert_not_called()
+    mock_save_checkpoint.assert_not_called()
+    mock_load_checkpoint.assert_called_once()
+    assert summary["trained"] is False
+    assert summary["paired_eval"] is True
+    assert summary["warmstart_episodes"] == 100
+    assert summary["train_episodes"] == 500
+    assert summary["agent"]["training_steps"] == 1234
 
 
 @patch.object(gap_close, "save_torch_checkpoint")

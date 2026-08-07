@@ -8,10 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-import torch
-
 from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
-from agents.common import agent_results_path, evaluate_greedy
+from agents.common import agent_results_path, evaluate_greedy, load_torch_checkpoint
 from agents.dqn import DeepQLearningAgent
 from agents.double_dqn import DoubleQNetworkLearningAgent
 from agents.dueling import DuelingDQNAgent
@@ -53,14 +51,9 @@ Q_TABLE_PATH = agent_results_path("tabular_q", "q_table.json")
 
 def load_torch_agent(agent_class, checkpoint_path: Path):
     """Construct an inference-only agent from a training checkpoint."""
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    try:
-        agent = agent_class(device="cpu")
-    except TypeError:
-        agent = agent_class()
-
-    agent.model.load_state_dict(checkpoint["model_state_dict"])
-    agent.model.eval()
+    agent, checkpoint = load_torch_checkpoint(
+        agent_class, checkpoint_path, device="cpu"
+    )
     agent.epsilon = 0.0
     return agent, checkpoint.get("training_steps")
 

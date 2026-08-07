@@ -378,7 +378,12 @@ def evaluate_greedy(
     return total_reward / num_episodes, distribution
 
 
-def save_torch_checkpoint(agent: Any, path: Path | str) -> Path:
+def save_torch_checkpoint(
+    agent: Any,
+    path: Path | str,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> Path:
     """Persist a neural agent's weights and training metadata."""
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
@@ -389,9 +394,55 @@ def save_torch_checkpoint(agent: Any, path: Path | str) -> Path:
         "optimizer_state_dict": agent.optimizer.state_dict(),
         "epsilon": agent.epsilon,
         "training_steps": agent.training_steps,
+        "input_size": getattr(agent, "input_size", None),
+        "hand_only_encoder": bool(getattr(agent, "hand_only_encoder", False)),
     }
+    if extra:
+        payload.update(extra)
     torch.save(payload, checkpoint_path)
     return checkpoint_path
+
+
+def load_torch_checkpoint(
+    agent_class: Any,
+    path: Path | str,
+    *,
+    device: str | None = "cpu",
+    **agent_kwargs: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Rebuild a neural agent from a :func:`save_torch_checkpoint` payload.
+
+    Restores ``hand_only_encoder`` from the checkpoint when present so 8-D
+    gap-close weights load into a matching network without retraining.
+    """
+    checkpoint_path = Path(path)
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+
+    kwargs: dict[str, Any] = dict(agent_kwargs)
+    if "hand_only_encoder" not in kwargs and "hand_only_encoder" in checkpoint:
+        kwargs["hand_only_encoder"] = bool(checkpoint["hand_only_encoder"])
+    if device is not None:
+        kwargs["device"] = device
+
+    try:
+        agent = agent_class(**kwargs)
+    except TypeError:
+        kwargs.pop("device", None)
+        agent = agent_class(**kwargs)
+
+    agent.model.load_state_dict(checkpoint["model_state_dict"])
+    if "target_model_state_dict" in checkpoint and hasattr(agent, "target_model"):
+        agent.target_model.load_state_dict(checkpoint["target_model_state_dict"])
+    if "optimizer_state_dict" in checkpoint and hasattr(agent, "optimizer"):
+        try:
+            agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        except (ValueError, KeyError):
+            pass
+    agent.epsilon = float(checkpoint.get("epsilon", 0.0))
+    if "training_steps" in checkpoint:
+        agent.training_steps = int(checkpoint["training_steps"])
+    agent.model.eval()
+    return agent, checkpoint
 
 
 def agent_results_path(agent_name: str, filename: str) -> Path:
