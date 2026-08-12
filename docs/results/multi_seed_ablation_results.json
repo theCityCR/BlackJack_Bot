@@ -1,0 +1,383 @@
+{
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "smoke": false,
+  "conditions": [
+    {
+      "condition_id": "A_full_scratch",
+      "label": "Full from scratch",
+      "average_reward": -0.01772,
+      "training_steps": 379506,
+      "win_rate": 0.42952,
+      "loss_rate": 0.48268,
+      "draw_rate": 0.0878,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_42/A_full_scratch/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_42/A_full_scratch/learning_curve.csv",
+      "resumed": true
+    },
+    {
+      "condition_id": "B_hand_only",
+      "label": "Hand-only",
+      "average_reward": -0.02344,
+      "training_steps": 379564,
+      "win_rate": 0.42752,
+      "loss_rate": 0.48532,
+      "draw_rate": 0.08716,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": true,
+      "model_path": "agents/results/double_dqn/ablation/seed_42/B_hand_only/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_42/B_hand_only/learning_curve.csv",
+      "resumed": true
+    },
+    {
+      "condition_id": "C_curriculum",
+      "label": "Curriculum",
+      "average_reward": -0.0326,
+      "training_steps": 378214,
+      "win_rate": 0.42456,
+      "loss_rate": 0.48492,
+      "draw_rate": 0.09052,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": true,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_42/C_curriculum/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_42/C_curriculum/learning_curve.csv",
+      "resumed": true
+    },
+    {
+      "condition_id": "D_curriculum_warmstart",
+      "label": "Curriculum + warm-start",
+      "average_reward": -0.0312,
+      "training_steps": 383701,
+      "win_rate": 0.42332,
+      "loss_rate": 0.4908,
+      "draw_rate": 0.08588,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 42,
+      "curriculum": true,
+      "warmstart": true,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_42/D_curriculum_warmstart/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_42/D_curriculum_warmstart/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "A_full_scratch",
+      "label": "Full from scratch",
+      "average_reward": -0.04402,
+      "training_steps": 379586,
+      "win_rate": 0.42492,
+      "loss_rate": 0.49288,
+      "draw_rate": 0.0822,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 43,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_43/A_full_scratch/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_43/A_full_scratch/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "B_hand_only",
+      "label": "Hand-only",
+      "average_reward": -0.02662,
+      "training_steps": 379514,
+      "win_rate": 0.42236,
+      "loss_rate": 0.4872,
+      "draw_rate": 0.09044,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 43,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": true,
+      "model_path": "agents/results/double_dqn/ablation/seed_43/B_hand_only/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_43/B_hand_only/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "C_curriculum",
+      "label": "Curriculum",
+      "average_reward": -0.03654,
+      "training_steps": 378300,
+      "win_rate": 0.42348,
+      "loss_rate": 0.49192,
+      "draw_rate": 0.0846,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 43,
+      "curriculum": true,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_43/C_curriculum/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_43/C_curriculum/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "D_curriculum_warmstart",
+      "label": "Curriculum + warm-start",
+      "average_reward": -0.04886,
+      "training_steps": 383090,
+      "win_rate": 0.41752,
+      "loss_rate": 0.49416,
+      "draw_rate": 0.08832,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 43,
+      "curriculum": true,
+      "warmstart": true,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_43/D_curriculum_warmstart/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_43/D_curriculum_warmstart/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "A_full_scratch",
+      "label": "Full from scratch",
+      "average_reward": -0.00736,
+      "training_steps": 379646,
+      "win_rate": 0.43576,
+      "loss_rate": 0.47824,
+      "draw_rate": 0.086,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 44,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_44/A_full_scratch/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_44/A_full_scratch/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "B_hand_only",
+      "label": "Hand-only",
+      "average_reward": -0.00768,
+      "training_steps": 379310,
+      "win_rate": 0.4302,
+      "loss_rate": 0.47912,
+      "draw_rate": 0.09068,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 44,
+      "curriculum": false,
+      "warmstart": false,
+      "force_shoe_off": true,
+      "model_path": "agents/results/double_dqn/ablation/seed_44/B_hand_only/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_44/B_hand_only/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "C_curriculum",
+      "label": "Curriculum",
+      "average_reward": -0.0218,
+      "training_steps": 378168,
+      "win_rate": 0.43188,
+      "loss_rate": 0.48176,
+      "draw_rate": 0.08636,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 44,
+      "curriculum": true,
+      "warmstart": false,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_44/C_curriculum/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_44/C_curriculum/learning_curve.csv",
+      "resumed": false
+    },
+    {
+      "condition_id": "D_curriculum_warmstart",
+      "label": "Curriculum + warm-start",
+      "average_reward": -0.02968,
+      "training_steps": 383838,
+      "win_rate": 0.43032,
+      "loss_rate": 0.48792,
+      "draw_rate": 0.08176,
+      "episodes": 200000,
+      "eval_episodes": 25000,
+      "seed": 44,
+      "curriculum": true,
+      "warmstart": true,
+      "force_shoe_off": false,
+      "model_path": "agents/results/double_dqn/ablation/seed_44/D_curriculum_warmstart/model.pt",
+      "learning_curve_path": "agents/results/double_dqn/ablation/seed_44/D_curriculum_warmstart/learning_curve.csv",
+      "resumed": false
+    }
+  ],
+  "per_seed": [
+    {
+      "seed": 42,
+      "output": "agents/results/double_dqn/ablation/seed_42/ablation_results.json"
+    },
+    {
+      "seed": 43,
+      "output": "agents/results/double_dqn/ablation/seed_43/ablation_results.json"
+    },
+    {
+      "seed": 44,
+      "output": "agents/results/double_dqn/ablation/seed_44/ablation_results.json"
+    }
+  ],
+  "summary": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "n_seeds": 3,
+    "conditions": [
+      {
+        "condition_id": "A_full_scratch",
+        "label": "Full from scratch",
+        "n_seeds": 3,
+        "average_reward": {
+          "mean": -0.023033,
+          "std": 0.018899,
+          "n": 3,
+          "min": -0.04402,
+          "max": -0.00736
+        },
+        "win_rate": {
+          "mean": 0.430067,
+          "std": 0.005441,
+          "n": 3,
+          "min": 0.42492,
+          "max": 0.43576
+        },
+        "loss_rate": {
+          "mean": 0.4846,
+          "std": 0.007506,
+          "n": 3,
+          "min": 0.47824,
+          "max": 0.49288
+        },
+        "draw_rate": {
+          "mean": 0.085333,
+          "std": 0.002859,
+          "n": 3,
+          "min": 0.0822,
+          "max": 0.0878
+        }
+      },
+      {
+        "condition_id": "B_hand_only",
+        "label": "Hand-only",
+        "n_seeds": 3,
+        "average_reward": {
+          "mean": -0.019247,
+          "std": 0.010142,
+          "n": 3,
+          "min": -0.02662,
+          "max": -0.00768
+        },
+        "win_rate": {
+          "mean": 0.426693,
+          "std": 0.003985,
+          "n": 3,
+          "min": 0.42236,
+          "max": 0.4302
+        },
+        "loss_rate": {
+          "mean": 0.48388,
+          "std": 0.004228,
+          "n": 3,
+          "min": 0.47912,
+          "max": 0.4872
+        },
+        "draw_rate": {
+          "mean": 0.089427,
+          "std": 0.001967,
+          "n": 3,
+          "min": 0.08716,
+          "max": 0.09068
+        }
+      },
+      {
+        "condition_id": "C_curriculum",
+        "label": "Curriculum",
+        "n_seeds": 3,
+        "average_reward": {
+          "mean": -0.030313,
+          "std": 0.007631,
+          "n": 3,
+          "min": -0.03654,
+          "max": -0.0218
+        },
+        "win_rate": {
+          "mean": 0.42664,
+          "std": 0.00457,
+          "n": 3,
+          "min": 0.42348,
+          "max": 0.43188
+        },
+        "loss_rate": {
+          "mean": 0.4862,
+          "std": 0.0052,
+          "n": 3,
+          "min": 0.48176,
+          "max": 0.49192
+        },
+        "draw_rate": {
+          "mean": 0.08716,
+          "std": 0.00304,
+          "n": 3,
+          "min": 0.0846,
+          "max": 0.09052
+        }
+      },
+      {
+        "condition_id": "D_curriculum_warmstart",
+        "label": "Curriculum + warm-start",
+        "n_seeds": 3,
+        "average_reward": {
+          "mean": -0.03658,
+          "std": 0.010662,
+          "n": 3,
+          "min": -0.04886,
+          "max": -0.02968
+        },
+        "win_rate": {
+          "mean": 0.42372,
+          "std": 0.006409,
+          "n": 3,
+          "min": 0.41752,
+          "max": 0.43032
+        },
+        "loss_rate": {
+          "mean": 0.49096,
+          "std": 0.003123,
+          "n": 3,
+          "min": 0.48792,
+          "max": 0.49416
+        },
+        "draw_rate": {
+          "mean": 0.08532,
+          "std": 0.003316,
+          "n": 3,
+          "min": 0.08176,
+          "max": 0.08832
+        }
+      }
+    ]
+  },
+  "artifact_note": "Local checkpoints under agents/results/double_dqn/ablation/seed_<n>/ (gitignored). This file is the published multi-seed aggregate."
+}

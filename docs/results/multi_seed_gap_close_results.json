@@ -1,0 +1,64 @@
+{
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "smoke": false,
+  "runs": [
+    {
+      "seed": 42,
+      "gap": -0.02504,
+      "agent_average_reward": -0.02848,
+      "rule_average_reward": -0.00344,
+      "model_path": "agents/results/double_dqn/gap_close/seed_42/hand_only_gap_close_model.pt",
+      "learning_curve_path": "agents/results/double_dqn/gap_close/seed_42/learning_curve.csv"
+    },
+    {
+      "seed": 43,
+      "gap": -0.0222,
+      "agent_average_reward": -0.0233,
+      "rule_average_reward": -0.0011,
+      "model_path": "agents/results/double_dqn/gap_close/seed_43/hand_only_gap_close_model.pt",
+      "learning_curve_path": "agents/results/double_dqn/gap_close/seed_43/learning_curve.csv"
+    },
+    {
+      "seed": 44,
+      "gap": -0.01728,
+      "agent_average_reward": -0.00544,
+      "rule_average_reward": 0.01184,
+      "model_path": "agents/results/double_dqn/gap_close/seed_44/hand_only_gap_close_model.pt",
+      "learning_curve_path": "agents/results/double_dqn/gap_close/seed_44/learning_curve.csv"
+    }
+  ],
+  "summary": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "n_seeds": 3,
+    "agent_average_reward": {
+      "mean": -0.019073,
+      "std": 0.012088,
+      "n": 3,
+      "min": -0.02848,
+      "max": -0.00544
+    },
+    "rule_average_reward": {
+      "mean": 0.002433,
+      "std": 0.00823,
+      "n": 3,
+      "min": -0.00344,
+      "max": 0.01184
+    },
+    "gap": {
+      "mean": -0.021507,
+      "std": 0.003926,
+      "n": 3,
+      "min": -0.02504,
+      "max": -0.01728
+    }
+  },
+  "artifact_note": "Local checkpoints under agents/results/double_dqn/gap_close/seed_<n>/ (gitignored). This file is the published multi-seed aggregate."
+}

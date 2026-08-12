@@ -11,12 +11,12 @@ Finite-shoe Blackjack RL study. Start with:
 - Five RL variants + verified 2-deck S17 DAS rule baseline
 - Shared 200k-episode neural protocol (`config/protocol.py`)
 - Primary ablation subject: Double DQN (`agents/double_dqn.py`)
-- Multi-seed CLI scaffolding via `--seeds` (matrix not yet published)
+- Multi-seed A–D / gap-close aggregates published (§5.4; seeds 42, 43, 44)
 
 ## Future work
 
 1. ~~Re-run hand-only gap-close under paired eval and replace provisional §5.3.~~ Done (`docs/results/gap_close_results.json`).
-2. ~~Re-eval the rule baseline after the chart tighten.~~ Done (−0.0034 paired; `docs/results/rule_baseline_paired.json`). Warm-start clones in the equalized ablation still use the historical chart until A–D are re-run.
-3. Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.
+2. ~~Re-eval the rule baseline after the chart tighten.~~ Done (−0.0034 paired; `docs/results/rule_baseline_paired.json`). Multi-seed ablation (§5.4) re-ran A–D with the tightened chart for warm-start; the historical single-seed §5.2 D row still reflects the pre-tighten chart.
+3. ~~Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.~~ Done (`docs/results/multi_seed_ablation_results.json`, `docs/results/multi_seed_gap_close_results.json`).
 4. Variable betting / bankroll — see [docs/design_variable_betting.md](docs/design_variable_betting.md) (design only until flat-bet ≈ rule).
 5. Configurable penetration and optional actor-critic methods as later follow-ons.

@@ -4,7 +4,7 @@
 
 ## Abstract
 
-We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a **2-deck S17 DAS** rule baseline. Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) reaches −0.0285 EV under paired eval but still trails the verified rule agent (−0.0034). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
+We study flat-bet Blackjack play under a fixed two-deck S17 ruleset with exact remaining-card composition in the observation. Five learning methods (tabular Q-learning through Dueling Double DQN with prioritized replay) are compared to a **2-deck S17 DAS** rule baseline. Under an earlier unequal training budget, no neural checkpoint beat that baseline. With a shared 200k-episode Double DQN protocol, a **hand-only** ablation (−0.0325) outperforms full shoe-from-scratch (−0.0877); curriculum alone (−0.0654) and curriculum + rule warm-start (−0.0513) sit in between. A longer hand-only gap-close run (100k clone + 500k RL) reaches −0.0285 EV under paired eval but still trails the verified rule agent (−0.0034). Across seeds 42–44, hand-only remains best on mean ablation EV (−0.0192 ± 0.0101) and gap-close stays short of the paired rule policy (mean gap −0.0215 ± 0.0039). None yet match the rule agent, but the ranking supports the claim that **state design and initialization dominate architecture depth** for this environment.
 
 ## 1. Introduction
 
@@ -141,11 +141,49 @@ python3 scripts/run_hand_only_gap_close.py --seed 42
 # later, without retraining:
 python3 scripts/run_hand_only_gap_close.py --seed 42 --eval-only
 ```
+
+### 5.4 Multi-seed matrix (seeds 42, 43, 44)
+
+Same protocols as §5.2 / §5.3, repeated over three RNG seeds. Published aggregates report **mean ± sample std** across seeds.
+
+**Ablation (200k train / 25k eval).** Hand-only remains best on mean EV; full-scratch improves vs the historical single-seed A row but with large seed variance. Curriculum variants trail hand-only under this budget.
+
+| Condition | Mean ± std avg reward |
+|---|---:|
+| B. Hand-only | **−0.0192 ± 0.0101** |
+| A. Full from scratch | −0.0230 ± 0.0189 |
+| C. Curriculum | −0.0303 ± 0.0076 |
+| D. Curriculum + warm-start | −0.0366 ± 0.0107 |
+
+Artifact: [`docs/results/multi_seed_ablation_results.json`](results/multi_seed_ablation_results.json).
+
+**Gap-close (100k clone + 500k RL, paired 25k eval).**
+
+| Metric | Mean ± std |
+|---|---:|
+| Hand-only agent EV | −0.0191 ± 0.0121 |
+| Rule baseline EV (paired) | +0.0024 ± 0.0082 |
+| Gap (agent − rule) | −0.0215 ± 0.0039 |
+
+Per-seed agent EV: −0.0285 (42), −0.0233 (43), −0.0054 (44). The gap to the paired rule policy stays negative on every seed.
+
+Artifact: [`docs/results/multi_seed_gap_close_results.json`](results/multi_seed_gap_close_results.json).
+
+Reproduce:
+
+```bash
+python3 scripts/run_ablation_double_dqn.py --seeds 42,43,44
+python3 scripts/run_hand_only_gap_close.py --seeds 42,43,44
+# continue after a pause (skip finished checkpoints):
+python3 scripts/run_ablation_double_dqn.py --seeds 42,43,44 --resume
+python3 scripts/run_hand_only_gap_close.py --seeds 42,43,44 --resume
+```
+
 ## 6. Discussion
 
-Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin. Curriculum and rule warm-start help relative to A, but under a 200k-episode budget the best learned policy remains hand-only—still short of the rule baseline (~−1.0% vs −3.3% EV in the historical §5.2 table). The paired gap-close (§5.3) improves hand-only further (−0.0285) yet widens the absolute gap to the **verified** rule chart (−0.0034 under the same shoes), confirming that longer imitation + RL alone does not match basic strategy under this protocol.
+Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215).
 
-**Limitations.** Flat betting only; no insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Ablation and gap-close tables are single-seed (42); `--seeds` CLI scaffolding exists but the multi-seed matrix is unpublished. Warm-start clones in the equalized ablation still reflect the pre-tighten chart. Variable betting is design-only ([`docs/design_variable_betting.md`](design_variable_betting.md))—positive EV vs the house is future work, not the claim of this study.
+**Limitations.** Flat betting only; no insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart. Variable betting is design-only ([`docs/design_variable_betting.md`](design_variable_betting.md))—positive EV vs the house is future work, not the claim of this study.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
@@ -169,7 +207,7 @@ Evaluate checkpoints:
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed scaffolding: `--seeds 42,43,44` on those runners and `evaluate_agents.py`. Variable betting design: [`docs/design_variable_betting.md`](design_variable_betting.md).
+Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting design: [`docs/design_variable_betting.md`](design_variable_betting.md).
 
 ## License
 

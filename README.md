@@ -8,7 +8,7 @@ Finite-shoe Blackjack as a controlled RL benchmark: does richer shoe composition
 
 Under a **shared 200k-episode Double DQN protocol**, hand-only training (−0.0325) beats full shoe-from-scratch (−0.0877); curriculum + warm-start (−0.0513) lands in between. The rule baseline remains ahead (−0.0103). Details: [docs/paper.md](docs/paper.md) §5.2.
 
-**Takeaway:** under equal compute, state design and initialization matter more than architecture depth—hand-only wins the ablation, yet still trails the rule baseline. Ablation table rule EV (−0.0103) is historical; the verified 2-deck S17 DAS chart is −0.0034 under paired eval ([§5.3](docs/paper.md)).
+**Takeaway:** under equal compute, state design and initialization matter more than architecture depth—hand-only wins the ablation, yet still trails the rule baseline. Ablation table rule EV (−0.0103) is historical; the verified 2-deck S17 DAS chart is −0.0034 under paired eval ([§5.3](docs/paper.md)). Multi-seed mean±std (seeds 42–44): [§5.4](docs/paper.md).
 
 | Condition | Avg reward |
 |---|---:|
