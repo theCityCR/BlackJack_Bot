@@ -80,6 +80,14 @@ class GameState:
         )
 
 
+@dataclass(frozen=True)
+class ShoeObservation:
+    """Pre-deal shoe features for bet sizing (after reshuffle check)."""
+
+    count_vector: Tuple[int, ...]
+    cards_remaining: int
+
+
 @dataclass
 class PlayerHandState:
     hand: Hand
@@ -98,7 +106,9 @@ class BlackjackGame:
         self.active_hand_index = 0
         self.done = False
         self.round_reward: Optional[float] = None
+        self.round_bet: float = 1.0
         self.initial_dealer_blackjack = False
+        self._shoe_prepared = False
 
     # ------------------------------------------------------------------
     # Compatibility properties
@@ -139,18 +149,43 @@ class BlackjackGame:
         return self.is_split_aces_hand
 
     # ------------------------------------------------------------------
-    # Reset
+    # Reset / deal
     # ------------------------------------------------------------------
 
-    def reset(self) -> Optional[GameState]:
+    def prepare_round(self) -> ShoeObservation:
+        """Reshuffle if needed and return pre-deal shoe features for betting."""
         self.deck.reset()
+        self.hand_states = []
+        self.dealer_hand = None
+        self.active_hand_index = 0
+        self.done = False
+        self.round_reward = None
+        self.round_bet = 1.0
+        self.initial_dealer_blackjack = False
+        self._shoe_prepared = True
+        return ShoeObservation(
+            count_vector=self.deck.get_count_vector(),
+            cards_remaining=self.deck.cards_remaining(),
+        )
 
-        self.hand_states = [PlayerHandState(hand=Hand(self.deck))]
+    def deal(self, *, bet: float = 1.0) -> Optional[GameState]:
+        """Deal a round at ``bet`` stake units (doubles/splits scale further)."""
+        if bet <= 0:
+            raise ValueError("bet must be positive")
+
+        if not self._shoe_prepared:
+            self.prepare_round()
+
+        self.round_bet = float(bet)
+        self.hand_states = [
+            PlayerHandState(hand=Hand(self.deck), bet_multiplier=self.round_bet)
+        ]
         self.dealer_hand = Hand(self.deck)
         self.active_hand_index = 0
         self.done = False
         self.round_reward = None
         self.initial_dealer_blackjack = False
+        self._shoe_prepared = False
 
         if self._dealer_has_blackjack():
             self.initial_dealer_blackjack = True
@@ -159,17 +194,31 @@ class BlackjackGame:
 
         return self.get_state()
 
-    def reset_with_cards(self, player_cards, dealer_cards) -> Optional[GameState]:
+    def reset(self, *, bet: float = 1.0) -> Optional[GameState]:
+        """Start a round at ``bet`` stake (default 1.0 preserves flat-bet protocols)."""
+        self.prepare_round()
+        return self.deal(bet=bet)
+
+    def reset_with_cards(
+        self, player_cards, dealer_cards, *, bet: float = 1.0
+    ) -> Optional[GameState]:
         """
         Testing helper.
 
         Creates fixed player/dealer hands without removing those cards from
         the deck. Use only for controlled tests, not normal training.
         """
+        if bet <= 0:
+            raise ValueError("bet must be positive")
+
         self.deck.reset()
 
+        self.round_bet = float(bet)
         self.hand_states = [
-            PlayerHandState(hand=Hand.from_cards(self.deck, player_cards))
+            PlayerHandState(
+                hand=Hand.from_cards(self.deck, player_cards),
+                bet_multiplier=self.round_bet,
+            )
         ]
 
         self.dealer_hand = Hand.from_cards(self.deck, dealer_cards)
@@ -178,6 +227,7 @@ class BlackjackGame:
         self.done = False
         self.round_reward = None
         self.initial_dealer_blackjack = False
+        self._shoe_prepared = False
 
         if self._dealer_has_blackjack():
             self.initial_dealer_blackjack = True
@@ -281,9 +331,11 @@ class BlackjackGame:
 
         if self.done:
             print(f"Dealer: {self.dealer_hand}")
+            print(f"Round bet: {self.round_bet}")
             print(f"Round reward: {self.round_reward}")
         else:
             print(f"Dealer upcard: {self.dealer_hand.cards[0]}")
+            print(f"Round bet: {self.round_bet}")
             print(f"Cards remaining: {self.deck.cards_remaining()}")
             print(f"Count vector: {self.deck.get_count_vector()}")
 

@@ -18,5 +18,5 @@ Finite-shoe Blackjack RL study. Start with:
 1. ~~Re-run hand-only gap-close under paired eval and replace provisional §5.3.~~ Done (`docs/results/gap_close_results.json`).
 2. ~~Re-eval the rule baseline after the chart tighten.~~ Done (−0.0034 paired; `docs/results/rule_baseline_paired.json`). Multi-seed ablation (§5.4) re-ran A–D with the tightened chart for warm-start; the historical single-seed §5.2 D row still reflects the pre-tighten chart.
 3. ~~Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.~~ Done (`docs/results/multi_seed_ablation_results.json`, `docs/results/multi_seed_gap_close_results.json`).
-4. Variable betting / bankroll — see [docs/design_variable_betting.md](docs/design_variable_betting.md) (design only until flat-bet ≈ rule).
+4. ~~Variable betting / bankroll~~ — rule + Hi-Lo spread shipped (`agents/spread_rule.py`, `scripts/run_variable_betting_eval.py`); see [docs/design_variable_betting.md](docs/design_variable_betting.md). Optional: publish a long paired EV table, bankroll / RoR reporting.
 5. Configurable penetration and optional actor-critic methods as later follow-ons.

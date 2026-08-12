@@ -12,6 +12,7 @@ Storefront: [README.md](README.md).
 | `config/protocol.py` | Shared neural training / ablation knobs |
 | `config/tabular.py` | Tabular Q hyperparameters |
 | `agents/rule.py` | Basic-strategy baseline |
+| `agents/counting.py` / `betting.py` / `spread_rule.py` | Hi-Lo true count + stake schedule + rule play |
 | `agents/tabular_q.py` | Tabular Q-learning |
 | `agents/dqn.py` / `double_dqn.py` / `dueling.py` / `prioritized.py` | Neural agents (study surface = net + `train_step`) |
 | `agents/neural_base.py` | Shared ε-greedy / episode / remember loop |
@@ -20,6 +21,7 @@ Storefront: [README.md](README.md).
 | `agents/networks.py` / `replay.py` | Shared Dueling net + PER buffer |
 | `agents/train_*.py` | Thin CLIs |
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
+| `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 
@@ -33,6 +35,7 @@ python3 -m pytest
 python3 main.py --episodes 1000 --seed 42
 python3 -m agents.train_double_dqn --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
+python3 scripts/run_variable_betting_eval.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 

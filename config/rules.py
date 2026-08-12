@@ -20,3 +20,7 @@ ALLOW_HIT_SPLIT_ACES = False
 REWARD_WIN = 1
 REWARD_LOSS = -1
 REWARD_DRAW = 0
+
+# Variable betting (flat protocols keep bet=1.0). Stake units for Hi-Lo spread.
+BET_MIN = 1
+BET_MAX = 8
