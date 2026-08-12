@@ -179,16 +179,24 @@ def summarize_variable_betting_runs(
     seeds: list[int],
 ) -> dict[str, Any]:
     """Mean/std over paired flat-vs-spread variable-betting run rows."""
-    metrics = _stats_for_keys(
-        rows,
-        [
-            "flat_average_reward",
-            "spread_average_reward",
-            "spread_ev_per_unit_wagered",
-            "spread_average_stake",
-            "delta_average_reward",
-        ],
-    )
+    keys = [
+        "flat_average_reward",
+        "spread_average_reward",
+        "spread_ev_per_unit_wagered",
+        "spread_average_stake",
+        "delta_average_reward",
+    ]
+    optional_bankroll_keys = [
+        "flat_risk_of_ruin",
+        "spread_risk_of_ruin",
+        "flat_mean_ending_bankroll",
+        "spread_mean_ending_bankroll",
+        "spread_mean_max_drawdown",
+        "spread_path_max_drawdown",
+    ]
+    if rows and all(key in rows[0] for key in ("spread_risk_of_ruin", "flat_risk_of_ruin")):
+        keys.extend(optional_bankroll_keys)
+    metrics = _stats_for_keys(rows, keys)
     return {
         "seeds": list(seeds),
         "n_seeds": len(seeds),

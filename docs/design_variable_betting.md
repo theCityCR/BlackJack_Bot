@@ -1,6 +1,6 @@
 # Design sketch: variable betting
 
-**Status:** implemented — `BlackjackGame.prepare_round` / `deal(bet=…)` / `reset(bet=1.0)`, Hi-Lo schedule in `agents/betting.py`, `SpreadRuleAgent`, eval via `scripts/run_variable_betting_eval.py`.  
+**Status:** implemented — `BlackjackGame.prepare_round` / `deal(bet=…)` / `reset(bet=1.0)`, Hi-Lo schedule in `agents/betting.py`, `SpreadRuleAgent`, eval via `scripts/run_variable_betting_eval.py`, optional bankroll/RoR via `--bankroll` (`agents/bankroll.py`).  
 **Gate (original):** pursue after flat-bet play is near the verified 2-deck S17 DAS rule baseline under paired eval. **Waived** for this product path: positive EV vs the house comes from bet spread, not flat-bet DQN parity.
 
 ## Goal
@@ -25,6 +25,8 @@ Pre-deal bet decision:
 | EV per round | Mean net units / round (primary “beat the house” claim) |
 | EV per unit wagered | Mean net / mean stake (isolates play quality from spread) |
 | Spread utilization | Fraction of rounds at each bet size vs true count |
+| Bankroll path | Ending / min bankroll and max drawdown on one continuous walk |
+| Trip risk of ruin | Fraction of independent trips that cannot cover the next stake (or hit ≤0) |
 
 Eval: consecutive rounds on paired seeded shoes (penetration required for
 counting), ≥50k–100k rounds. Multi-seed published aggregate (100k × seeds 42–44):
@@ -35,8 +37,14 @@ python3 scripts/run_variable_betting_eval.py --episodes 50000 --seed 42
 python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 \
   --output docs/results/multi_seed_variable_betting_results.json
 python3 scripts/run_variable_betting_eval.py --smoke
+# Portfolio / RoR demo (default start 200 units; trips default to --rounds-per-shoe):
+python3 scripts/run_variable_betting_eval.py --episodes 50000 --seed 42 --bankroll
+python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 \
+  --bankroll 200 --trip-rounds 100
 ```
 
+Ruin rule: before each round, if cash `<` the scheduled stake, the path/trip stops
+as ruined. After settlement, bankroll `≤ 0` also counts as ruin.
 ## Policies
 
 Two-level demo (shipped):
@@ -49,7 +57,8 @@ End-to-end RL for bet+play remains optional after the rule+spread baseline shows
 ## Rules / bankroll notes
 
 - Penetration reshuffles at ≤26 cards; counting strength is limited by that cut.
-- Optional bankroll / risk-of-ruin reporting for portfolio demos — not required for EV tables.
+- Bankroll / risk-of-ruin reporting: `agents/bankroll.py` via `--bankroll` on
+  `scripts/run_variable_betting_eval.py` (optional; not part of the published §5.5 EV table).
 - Insurance / surrender remain out of scope unless the play chart is extended.
 
 ## Non-goals

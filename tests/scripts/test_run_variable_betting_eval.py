@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from agents.spread_rule import SpreadRuleAgent
 import scripts.run_variable_betting_eval as vb_eval
 
@@ -18,6 +20,24 @@ def test_run_comparison_summary_keys():
     assert "ev_per_unit_wagered" in summary["spread_rule"]
     assert "bet_fraction" in summary["spread_rule"]
     assert "delta_average_reward" in summary
+    assert "bankroll" not in summary["spread_rule"]
+
+
+def test_run_comparison_includes_bankroll_when_requested():
+    summary = vb_eval.run_comparison(
+        episodes=40,
+        seed=3,
+        rounds_per_shoe=20,
+        starting_bankroll=50.0,
+        trip_rounds=10,
+    )
+    assert summary["starting_bankroll"] == 50.0
+    assert summary["trip_rounds"] == 10
+    spread_bankroll = summary["spread_rule"]["bankroll"]
+    assert "path" in spread_bankroll
+    assert "trips" in spread_bankroll
+    assert spread_bankroll["trips"]["trip_rounds"] == 10
+    assert 0.0 <= spread_bankroll["trips"]["risk_of_ruin"] <= 1.0
 
 
 def test_persistent_shoe_eval_uses_raised_bets():
@@ -37,6 +57,21 @@ def test_compact_run_row_flattens_metrics():
     assert row["seed"] == 5
     assert "flat_average_reward" in row
     assert "delta_average_reward" in row
+    assert "spread_risk_of_ruin" not in row
+
+
+def test_compact_run_row_includes_bankroll_metrics():
+    summary = vb_eval.run_comparison(
+        episodes=40,
+        seed=5,
+        rounds_per_shoe=20,
+        starting_bankroll=80.0,
+    )
+    row = vb_eval.compact_run_row(summary)
+    assert row["starting_bankroll"] == 80.0
+    assert row["trip_rounds"] == 20
+    assert "spread_risk_of_ruin" in row
+    assert "flat_risk_of_ruin" in row
 
 
 def test_main_multi_seed_writes_aggregate(tmp_path: Path, monkeypatch):
@@ -61,3 +96,40 @@ def test_main_multi_seed_writes_aggregate(tmp_path: Path, monkeypatch):
     assert len(payload["runs"]) == 2
     assert payload["summary"]["n_seeds"] == 2
     assert "spread_average_reward" in payload["summary"]
+    assert "starting_bankroll" not in payload
+
+
+def test_main_multi_seed_with_bankroll(tmp_path: Path, monkeypatch):
+    out = tmp_path / "multi_seed_bankroll.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "run_variable_betting_eval.py",
+            "--smoke",
+            "--seeds",
+            "7,8",
+            "--rounds-per-shoe",
+            "25",
+            "--bankroll",
+            "100",
+            "--trip-rounds",
+            "25",
+            "--output",
+            str(out),
+        ],
+    )
+    vb_eval.main()
+    payload = json.loads(out.read_text())
+    assert payload["starting_bankroll"] == 100.0
+    assert payload["trip_rounds"] == 25
+    assert "spread_risk_of_ruin" in payload["summary"]
+    assert "spread_risk_of_ruin" in payload["runs"][0]
+
+
+def test_main_rejects_trip_rounds_without_bankroll(monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["run_variable_betting_eval.py", "--smoke", "--trip-rounds", "10"],
+    )
+    with pytest.raises(SystemExit):
+        vb_eval.main()

@@ -178,3 +178,41 @@ def test_summarize_variable_betting_runs():
     assert summary["spread_average_reward"]["mean"] == pytest.approx(0.03)
     assert summary["delta_average_reward"]["mean"] == pytest.approx(0.04)
     assert summary["flat_average_reward"]["n"] == 2
+    assert "spread_risk_of_ruin" not in summary
+
+
+def test_summarize_variable_betting_runs_with_bankroll():
+    rows = [
+        {
+            "seed": 42,
+            "flat_average_reward": 0.0,
+            "spread_average_reward": 0.04,
+            "spread_ev_per_unit_wagered": 0.02,
+            "spread_average_stake": 2.0,
+            "delta_average_reward": 0.04,
+            "flat_risk_of_ruin": 0.0,
+            "spread_risk_of_ruin": 0.02,
+            "flat_mean_ending_bankroll": 200.0,
+            "spread_mean_ending_bankroll": 210.0,
+            "spread_mean_max_drawdown": 20.0,
+            "spread_path_max_drawdown": 40.0,
+        },
+        {
+            "seed": 43,
+            "flat_average_reward": -0.02,
+            "spread_average_reward": 0.02,
+            "spread_ev_per_unit_wagered": 0.01,
+            "spread_average_stake": 2.2,
+            "delta_average_reward": 0.04,
+            "flat_risk_of_ruin": 0.0,
+            "spread_risk_of_ruin": 0.04,
+            "flat_mean_ending_bankroll": 198.0,
+            "spread_mean_ending_bankroll": 205.0,
+            "spread_mean_max_drawdown": 30.0,
+            "spread_path_max_drawdown": 50.0,
+        },
+    ]
+    summary = summarize_variable_betting_runs(rows, seeds=[42, 43])
+    assert summary["spread_risk_of_ruin"]["mean"] == pytest.approx(0.03)
+    assert summary["flat_risk_of_ruin"]["mean"] == pytest.approx(0.0)
+    assert summary["spread_mean_ending_bankroll"]["mean"] == pytest.approx(207.5)

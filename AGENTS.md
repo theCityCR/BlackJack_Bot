@@ -13,6 +13,7 @@ Storefront: [README.md](README.md).
 | `config/tabular.py` | Tabular Q hyperparameters |
 | `agents/rule.py` | Basic-strategy baseline |
 | `agents/counting.py` / `betting.py` / `spread_rule.py` | Hi-Lo true count + stake schedule + rule play |
+| `agents/bankroll.py` | Bankroll path + trip risk-of-ruin for spread demos |
 | `agents/tabular_q.py` | Tabular Q-learning |
 | `agents/dqn.py` / `double_dqn.py` / `dueling.py` / `prioritized.py` | Neural agents (study surface = net + `train_step`) |
 | `agents/neural_base.py` | Shared ε-greedy / episode / remember loop |
@@ -36,9 +37,9 @@ python3 main.py --episodes 1000 --seed 42
 python3 -m agents.train_double_dqn --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
+python3 scripts/run_variable_betting_eval.py --smoke --bankroll
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
-
 ## Conventions for agents
 
 - Prefer editing shared infra (`neural_base`, `common`, `episode`) over copy-pasting into one agent.
