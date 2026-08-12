@@ -17,12 +17,15 @@ Storefront: [README.md](README.md).
 | `agents/tabular_q.py` | Tabular Q-learning |
 | `agents/dqn.py` / `double_dqn.py` / `dueling.py` / `prioritized.py` | Neural agents (study surface = net + `train_step`) |
 | `agents/neural_base.py` | Shared ε-greedy / episode / remember loop |
-| `agents/common.py` | `encode_state`, training loop, checkpoints |
+| `agents/policy_base.py` / `reinforce.py` / `a2c.py` / `ppo.py` | Bet+play policy-gradient agents (on-policy) |
+| `agents/pg_warmstart.py` / `train_pg_cli.py` | Spread-rule CE warm-start + PG train CLIs |
+| `agents/common.py` | `encode_state` / `encode_shoe`, training loop, checkpoints |
 | `agents/episode.py` | Per-hand reward attribution |
-| `agents/networks.py` / `replay.py` | Shared Dueling net + PER buffer |
+| `agents/networks.py` / `replay.py` | Shared Dueling net, `BetPlayActorCritic`, PER buffer |
+| `config/pg.py` | Policy-gradient hyperparameters (separate from DQN protocol) |
 | `agents/train_*.py` | Thin CLIs |
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
-| `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds` for multi-seed aggregate) |
+| `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds`; optional `--pg-agent`) |
 | `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
@@ -36,15 +39,20 @@ python3 -m pip install -e '.[dev]'
 python3 -m pytest
 python3 main.py --episodes 1000 --seed 42
 python3 -m agents.train_double_dqn --seed 42
+python3 -m agents.train_reinforce --seed 42
+python3 -m agents.train_a2c --seed 42
+python3 -m agents.train_ppo --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke --bankroll
+python3 scripts/run_variable_betting_eval.py --smoke \
+  --pg-agent a2c --pg-checkpoint agents/results/a2c/a2c_bet_play_model.pt
 python3 scripts/run_penetration_sweep.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 ## Conventions for agents
 
-- Prefer editing shared infra (`neural_base`, `common`, `episode`) over copy-pasting into one agent.
+- Prefer editing shared infra (`neural_base`, `policy_base`, `common`, `episode`) over copy-pasting into one agent.
 - Keep Q-target math / loss / architecture differences intentional per agent file.
 - Ablation default subject is **Double DQN**.
 - Do not casually edit published artifacts under `docs/results/`.

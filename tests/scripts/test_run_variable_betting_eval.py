@@ -153,3 +153,29 @@ def test_main_rejects_trip_rounds_without_bankroll(monkeypatch):
     )
     with pytest.raises(SystemExit):
         vb_eval.main()
+
+
+def test_run_comparison_with_pg_agent():
+    from agents.reinforce import ReinforceAgent
+
+    agent = ReinforceAgent()
+    summary = vb_eval.run_comparison(
+        episodes=30,
+        seed=2,
+        rounds_per_shoe=15,
+        pg_agent=agent,
+        pg_agent_name="reinforce",
+    )
+    assert summary["pg_agent"] == "reinforce"
+    assert "average_reward" in summary["pg_policy"]
+    assert "delta_pg_minus_flat" in summary
+    assert "delta_pg_minus_spread" in summary
+
+
+def test_main_rejects_pg_agent_without_checkpoint(monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["run_variable_betting_eval.py", "--smoke", "--pg-agent", "a2c"],
+    )
+    with pytest.raises(SystemExit):
+        vb_eval.main()

@@ -1,6 +1,6 @@
 # Design sketch: variable betting
 
-**Status:** implemented — `BlackjackGame.prepare_round` / `deal(bet=…)` / `reset(bet=1.0)`, Hi-Lo schedule in `agents/betting.py`, `SpreadRuleAgent`, eval via `scripts/run_variable_betting_eval.py`, optional bankroll/RoR via `--bankroll` (`agents/bankroll.py`).  
+**Status:** implemented — `BlackjackGame.prepare_round` / `deal(bet=…)` / `reset(bet=1.0)`, Hi-Lo schedule in `agents/betting.py`, `SpreadRuleAgent`, eval via `scripts/run_variable_betting_eval.py`, optional bankroll/RoR via `--bankroll` (`agents/bankroll.py`), and bet+play PG agents (REINFORCE / A2C / PPO) via `agents/train_reinforce|a2c|ppo`.  
 **Gate (original):** pursue after flat-bet play is near the verified 2-deck S17 DAS rule baseline under paired eval. **Waived** for this product path: positive EV vs the house comes from bet spread, not flat-bet DQN parity.
 
 ## Goal
@@ -56,7 +56,13 @@ Two-level demo (shipped):
 1. **Bet:** Hi-Lo true count from `count_vector` → `TrueCountBetSchedule` (TC≤0→1, 1→2, 2→4, 3→6, ≥4→8).
 2. **Play:** verified rule chart (`RuleAgent`).
 
-End-to-end RL for bet+play remains optional after the rule+spread baseline shows positive EV.
+End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinforce.py`, `a2c.py`, `ppo.py` with shared `agents/policy_base.py`. Discrete stakes `{1..BET_MAX}` then masked play actions. Warm-start clones SpreadRule via CE (`agents/pg_warmstart.py`).
+
+```bash
+python3 -m agents.train_a2c --episodes 1000 --seed 42 --no-warmstart
+python3 scripts/run_variable_betting_eval.py --smoke \
+  --pg-agent a2c --pg-checkpoint agents/results/a2c/a2c_bet_play_model.pt
+```
 
 ## Rules / bankroll notes
 
@@ -68,4 +74,4 @@ End-to-end RL for bet+play remains optional after the rule+spread baseline shows
 ## Non-goals
 
 - No change to published flat-bet ablation or gap-close tables under `docs/results/`.
-- No actor-critic requirement for the first demo.
+- PG checkpoints live under `agents/results/<reinforce|a2c|ppo>/` until deliberately published.

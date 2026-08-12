@@ -32,7 +32,7 @@ from config import (
     NEURAL_WARMSTART_EPISODES,
     NUM_DECKS,
 )
-from game import Action, GameState
+from game import Action, GameState, ShoeObservation
 
 
 ACTION_LIST = [Action.HIT, Action.STAND, Action.DOUBLE, Action.SPLIT]
@@ -99,6 +99,29 @@ def encode_state(
 
     return torch.tensor(
         hand_features + shoe_features,
+        dtype=torch.float32,
+    )
+
+
+def encode_shoe(
+    shoe: ShoeObservation,
+    *,
+    use_shoe_features: bool = True,
+) -> torch.Tensor:
+    """Encode pre-deal shoe features for bet sizing (11-D)."""
+    if not use_shoe_features:
+        return torch.zeros(SHOE_FEATURE_COUNT, dtype=torch.float32)
+
+    count_vector = tuple(shoe.count_vector)
+    cards_remaining = int(shoe.cards_remaining)
+    if cards_remaining <= 0:
+        normalized_count_vector = [0.0] * 10
+    else:
+        normalized_count_vector = [
+            count / cards_remaining for count in count_vector
+        ]
+    return torch.tensor(
+        [cards_remaining / INITIAL_SHOE_SIZE, *normalized_count_vector],
         dtype=torch.float32,
     )
 
@@ -426,6 +449,35 @@ def save_torch_checkpoint(
     return checkpoint_path
 
 
+def save_policy_checkpoint(
+    agent: Any,
+    path: Path | str,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Persist a bet+play policy-gradient agent (no target network)."""
+    checkpoint_path = Path(path)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "kind": "bet_play_pg",
+        "model_state_dict": agent.model.state_dict(),
+        "optimizer_state_dict": agent.optimizer.state_dict(),
+        "training_steps": agent.training_steps,
+        "shoe_size": getattr(agent, "shoe_size", None),
+        "state_size": getattr(agent, "state_size", None),
+    }
+    if hasattr(agent, "return_baseline"):
+        payload["return_baseline"] = float(agent.return_baseline)
+        payload["baseline_initialized"] = bool(
+            getattr(agent, "_baseline_initialized", False)
+        )
+    if extra:
+        payload.update(extra)
+    torch.save(payload, checkpoint_path)
+    return checkpoint_path
+
+
 def load_torch_checkpoint(
     agent_class: Any,
     path: Path | str,
@@ -464,6 +516,44 @@ def load_torch_checkpoint(
     agent.epsilon = float(checkpoint.get("epsilon", 0.0))
     if "training_steps" in checkpoint:
         agent.training_steps = int(checkpoint["training_steps"])
+    agent.model.eval()
+    return agent, checkpoint
+
+
+def load_policy_checkpoint(
+    agent_class: Any,
+    path: Path | str,
+    *,
+    device: str | None = "cpu",
+    **agent_kwargs: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Rebuild a bet+play PG agent from :func:`save_policy_checkpoint`."""
+    checkpoint_path = Path(path)
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+
+    kwargs: dict[str, Any] = dict(agent_kwargs)
+    if device is not None:
+        kwargs["device"] = device
+
+    try:
+        agent = agent_class(**kwargs)
+    except TypeError:
+        kwargs.pop("device", None)
+        agent = agent_class(**kwargs)
+
+    agent.model.load_state_dict(checkpoint["model_state_dict"])
+    if "optimizer_state_dict" in checkpoint and hasattr(agent, "optimizer"):
+        try:
+            agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        except (ValueError, KeyError):
+            pass
+    if "training_steps" in checkpoint:
+        agent.training_steps = int(checkpoint["training_steps"])
+    if "return_baseline" in checkpoint and hasattr(agent, "return_baseline"):
+        agent.return_baseline = float(checkpoint["return_baseline"])
+        agent._baseline_initialized = bool(
+            checkpoint.get("baseline_initialized", True)
+        )
     agent.model.eval()
     return agent, checkpoint
 

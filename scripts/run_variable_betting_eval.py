@@ -59,7 +59,7 @@ def _bucket_true_count(tc: float) -> str:
 
 
 def evaluate_spread_policy(
-    agent: SpreadRuleAgent,
+    agent: Any,
     episodes: int,
     *,
     seed: int,
@@ -68,7 +68,11 @@ def evaluate_spread_policy(
     trip_rounds: int | None = None,
     reshuffle_threshold: int | None = None,
 ) -> dict[str, Any]:
-    """Run consecutive rounds on seeded shoes and collect betting metrics."""
+    """Run consecutive rounds on seeded shoes and collect betting metrics.
+
+    ``agent`` must implement ``play_episode`` and expose ``last_bet`` /
+    ``last_true_count`` (SpreadRuleAgent or bet+play PG agents).
+    """
     if episodes <= 0:
         raise ValueError("episodes must be positive")
     if rounds_per_shoe <= 0:
@@ -158,6 +162,27 @@ def evaluate_spread_policy(
     return stats
 
 
+def load_pg_agent(agent_name: str, checkpoint: Path, *, device: str = "cpu") -> Any:
+    """Load a bet+play policy-gradient checkpoint by short name."""
+    from agents.a2c import A2CAgent
+    from agents.common import load_policy_checkpoint
+    from agents.ppo import PPOAgent
+    from agents.reinforce import ReinforceAgent
+
+    registry = {
+        "reinforce": ReinforceAgent,
+        "a2c": A2CAgent,
+        "ppo": PPOAgent,
+    }
+    key = agent_name.strip().lower()
+    if key not in registry:
+        raise ValueError(
+            f"unknown pg agent {agent_name!r}; expected one of {sorted(registry)}"
+        )
+    agent, _ = load_policy_checkpoint(registry[key], checkpoint, device=device)
+    return agent
+
+
 def run_comparison(
     episodes: int,
     seed: int,
@@ -166,6 +191,8 @@ def run_comparison(
     starting_bankroll: float | None = None,
     trip_rounds: int | None = None,
     reshuffle_threshold: int | None = None,
+    pg_agent: Any | None = None,
+    pg_agent_name: str | None = None,
 ) -> dict[str, Any]:
     flat = SpreadRuleAgent(bet_policy=FlatBetSchedule(bet=1.0))
     spread = SpreadRuleAgent(bet_policy=TrueCountBetSchedule())
@@ -203,6 +230,24 @@ def run_comparison(
         "play_agent": "RuleAgent",
         "bet_schedule": "TrueCountBetSchedule(default 1-8)",
     }
+    if pg_agent is not None:
+        pg_stats = evaluate_spread_policy(
+            pg_agent,
+            episodes,
+            seed=seed,
+            rounds_per_shoe=rounds_per_shoe,
+            starting_bankroll=starting_bankroll,
+            trip_rounds=trip_rounds,
+            reshuffle_threshold=reshuffle_threshold,
+        )
+        summary["pg_agent"] = pg_agent_name or type(pg_agent).__name__
+        summary["pg_policy"] = pg_stats
+        summary["delta_pg_minus_flat"] = (
+            pg_stats["average_reward"] - flat_stats["average_reward"]
+        )
+        summary["delta_pg_minus_spread"] = (
+            pg_stats["average_reward"] - spread_stats["average_reward"]
+        )
     if starting_bankroll is not None:
         summary["starting_bankroll"] = float(starting_bankroll)
         summary["trip_rounds"] = (
@@ -268,9 +313,24 @@ def print_comparison(summary: dict[str, Any]) -> None:
     print(f"Delta EV/round (spread − flat): {summary['delta_average_reward']:+.4f}")
     print(f"Spread bet mix: {spread['bet_fraction']}")
     print(f"True-count mix: {spread['true_count_fraction']}")
+    if "pg_policy" in summary:
+        pg = summary["pg_policy"]
+        print(
+            f"PG ({summary.get('pg_agent', 'pg')}): "
+            f"EV/round={pg['average_reward']:+.4f}  "
+            f"EV/unit={pg['ev_per_unit_wagered']:+.4f}  "
+            f"avg stake={pg['average_stake']:.2f}"
+        )
+        print(
+            f"Delta EV/round (pg − flat): {summary['delta_pg_minus_flat']:+.4f}  "
+            f"(pg − spread): {summary['delta_pg_minus_spread']:+.4f}"
+        )
+        print(f"PG bet mix: {pg['bet_fraction']}")
     if "bankroll" in spread:
         _print_bankroll("Flat", flat["bankroll"])
         _print_bankroll("Spread", spread["bankroll"])
+        if "pg_policy" in summary and "bankroll" in summary["pg_policy"]:
+            _print_bankroll("PG", summary["pg_policy"]["bankroll"])
 
 
 def _print_bankroll(label: str, report: dict[str, Any]) -> None:
@@ -346,6 +406,18 @@ def main() -> None:
         action="store_true",
         help="Short paired run (500 episodes) for CI",
     )
+    parser.add_argument(
+        "--pg-agent",
+        choices=("reinforce", "a2c", "ppo"),
+        default=None,
+        help="Optional bet+play PG agent to eval alongside flat/spread rule",
+    )
+    parser.add_argument(
+        "--pg-checkpoint",
+        type=Path,
+        default=None,
+        help="Checkpoint for --pg-agent (required when --pg-agent is set)",
+    )
     args = parser.parse_args()
 
     if args.trip_rounds is not None and args.bankroll is None:
@@ -356,6 +428,10 @@ def main() -> None:
         parser.error("--trip-rounds must be positive")
     if args.reshuffle_threshold is not None and args.reshuffle_threshold < 0:
         parser.error("--reshuffle-threshold must be non-negative")
+    if (args.pg_agent is None) ^ (args.pg_checkpoint is None):
+        parser.error("--pg-agent and --pg-checkpoint must be set together")
+    if args.pg_checkpoint is not None and not args.pg_checkpoint.is_file():
+        parser.error(f"--pg-checkpoint not found: {args.pg_checkpoint}")
 
     episodes = 500 if args.smoke else args.episodes
     seeds = seeds_from_args(args)
@@ -364,6 +440,9 @@ def main() -> None:
     starting_bankroll = args.bankroll
     trip_rounds = args.trip_rounds
     reshuffle_threshold = args.reshuffle_threshold
+    pg_agent = None
+    if args.pg_agent is not None:
+        pg_agent = load_pg_agent(args.pg_agent, args.pg_checkpoint)
 
     if not multi:
         summary = run_comparison(
@@ -373,6 +452,8 @@ def main() -> None:
             starting_bankroll=starting_bankroll,
             trip_rounds=trip_rounds,
             reshuffle_threshold=reshuffle_threshold,
+            pg_agent=pg_agent,
+            pg_agent_name=args.pg_agent,
         )
         print_comparison(summary)
         if args.output is not None:
@@ -383,6 +464,12 @@ def main() -> None:
 
     runs: list[dict[str, Any]] = []
     for seed in seeds:
+        # Reload so eval state does not leak across seeds.
+        seed_pg = (
+            None
+            if args.pg_agent is None
+            else load_pg_agent(args.pg_agent, args.pg_checkpoint)
+        )
         summary = run_comparison(
             episodes,
             seed,
@@ -390,6 +477,8 @@ def main() -> None:
             starting_bankroll=starting_bankroll,
             trip_rounds=trip_rounds,
             reshuffle_threshold=reshuffle_threshold,
+            pg_agent=seed_pg,
+            pg_agent_name=args.pg_agent,
         )
         print_comparison(summary)
         print("---")
