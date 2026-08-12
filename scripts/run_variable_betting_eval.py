@@ -26,6 +26,8 @@ from agents.betting import FlatBetSchedule, TrueCountBetSchedule
 from agents.cli_seeds import add_seed_arguments, seeds_from_args, summarize_variable_betting_runs
 from agents.rule import RuleAgent
 from agents.spread_rule import SpreadRuleAgent
+from cards import dealt_penetration
+from config import NUM_DECKS, RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
 from game import BlackjackGame
 
 DEFAULT_ROUNDS_PER_SHOE = 100
@@ -35,11 +37,16 @@ DEFAULT_MULTI_SEED_OUTPUT = Path(
 )
 
 
-def make_shoe_session(base_seed: int, session_index: int) -> BlackjackGame:
+def make_shoe_session(
+    base_seed: int,
+    session_index: int,
+    *,
+    reshuffle_threshold: int | None = None,
+) -> BlackjackGame:
     """Fresh shoe shuffled under the same pairing key as agents.common."""
     seed = (int(base_seed) + int(session_index) * 1_000_003) & 0x7FFFFFFF
     random.seed(seed)
-    return BlackjackGame()
+    return BlackjackGame(reshuffle_threshold=reshuffle_threshold)
 
 
 def _bucket_true_count(tc: float) -> str:
@@ -59,12 +66,19 @@ def evaluate_spread_policy(
     rounds_per_shoe: int = DEFAULT_ROUNDS_PER_SHOE,
     starting_bankroll: float | None = None,
     trip_rounds: int | None = None,
+    reshuffle_threshold: int | None = None,
 ) -> dict[str, Any]:
     """Run consecutive rounds on seeded shoes and collect betting metrics."""
     if episodes <= 0:
         raise ValueError("episodes must be positive")
     if rounds_per_shoe <= 0:
         raise ValueError("rounds_per_shoe must be positive")
+
+    cut = (
+        RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
+        if reshuffle_threshold is None
+        else int(reshuffle_threshold)
+    )
 
     total_reward = 0.0
     total_stake = 0.0
@@ -80,7 +94,9 @@ def evaluate_spread_policy(
     rounds_played = 0
     session_index = 0
     while rounds_played < episodes:
-        game = make_shoe_session(seed, session_index)
+        game = make_shoe_session(
+            seed, session_index, reshuffle_threshold=cut
+        )
         session_index += 1
         rounds_this_shoe = min(rounds_per_shoe, episodes - rounds_played)
         for _ in range(rounds_this_shoe):
@@ -109,6 +125,8 @@ def evaluate_spread_policy(
         "seed": seed,
         "rounds_per_shoe": rounds_per_shoe,
         "shoe_sessions": sessions,
+        "reshuffle_threshold": cut,
+        "dealt_penetration": dealt_penetration(cut, NUM_DECKS),
         "average_reward": total_reward / episodes,
         "average_stake": total_stake / episodes,
         "ev_per_unit_wagered": total_reward / total_stake if total_stake else 0.0,
@@ -147,6 +165,7 @@ def run_comparison(
     rounds_per_shoe: int = DEFAULT_ROUNDS_PER_SHOE,
     starting_bankroll: float | None = None,
     trip_rounds: int | None = None,
+    reshuffle_threshold: int | None = None,
 ) -> dict[str, Any]:
     flat = SpreadRuleAgent(bet_policy=FlatBetSchedule(bet=1.0))
     spread = SpreadRuleAgent(bet_policy=TrueCountBetSchedule())
@@ -157,6 +176,7 @@ def run_comparison(
         rounds_per_shoe=rounds_per_shoe,
         starting_bankroll=starting_bankroll,
         trip_rounds=trip_rounds,
+        reshuffle_threshold=reshuffle_threshold,
     )
     spread_stats = evaluate_spread_policy(
         spread,
@@ -165,11 +185,15 @@ def run_comparison(
         rounds_per_shoe=rounds_per_shoe,
         starting_bankroll=starting_bankroll,
         trip_rounds=trip_rounds,
+        reshuffle_threshold=reshuffle_threshold,
     )
+    cut = flat_stats["reshuffle_threshold"]
     summary: dict[str, Any] = {
         "episodes": episodes,
         "seed": seed,
         "rounds_per_shoe": rounds_per_shoe,
+        "reshuffle_threshold": cut,
+        "dealt_penetration": flat_stats["dealt_penetration"],
         "paired_eval": True,
         "flat_rule": flat_stats,
         "spread_rule": spread_stats,
@@ -195,6 +219,8 @@ def compact_run_row(summary: dict[str, Any]) -> dict[str, Any]:
         "seed": summary["seed"],
         "episodes": summary["episodes"],
         "rounds_per_shoe": summary["rounds_per_shoe"],
+        "reshuffle_threshold": summary["reshuffle_threshold"],
+        "dealt_penetration": summary["dealt_penetration"],
         "flat_average_reward": flat["average_reward"],
         "spread_average_reward": spread["average_reward"],
         "spread_ev_per_unit_wagered": spread["ev_per_unit_wagered"],
@@ -225,7 +251,9 @@ def print_comparison(summary: dict[str, Any]) -> None:
     spread = summary["spread_rule"]
     print(
         f"Episodes: {summary['episodes']}  seed={summary['seed']}  "
-        f"rounds/shoe={summary['rounds_per_shoe']}  paired"
+        f"rounds/shoe={summary['rounds_per_shoe']}  "
+        f"cut≤{summary['reshuffle_threshold']}  "
+        f"pen={summary['dealt_penetration']:.1%}  paired"
     )
     print(
         f"Flat rule:   EV/round={flat['average_reward']:+.4f}  "
@@ -273,6 +301,16 @@ def main() -> None:
         help="Consecutive rounds per seeded shoe session (counting needs penetration)",
     )
     parser.add_argument(
+        "--reshuffle-threshold",
+        type=int,
+        default=None,
+        help=(
+            "Cut card: reshuffle when remaining cards ≤ this value "
+            f"(default {RESHUFFLE_WHEN_CARDS_REMAINING_BELOW}). "
+            "Lower cut ⇒ deeper penetration and stronger counting."
+        ),
+    )
+    parser.add_argument(
         "--bankroll",
         nargs="?",
         const=DEFAULT_BANKROLL_UNITS,
@@ -316,6 +354,8 @@ def main() -> None:
         parser.error("--bankroll must be positive")
     if args.trip_rounds is not None and args.trip_rounds <= 0:
         parser.error("--trip-rounds must be positive")
+    if args.reshuffle_threshold is not None and args.reshuffle_threshold < 0:
+        parser.error("--reshuffle-threshold must be non-negative")
 
     episodes = 500 if args.smoke else args.episodes
     seeds = seeds_from_args(args)
@@ -323,6 +363,7 @@ def main() -> None:
     _ = RuleAgent
     starting_bankroll = args.bankroll
     trip_rounds = args.trip_rounds
+    reshuffle_threshold = args.reshuffle_threshold
 
     if not multi:
         summary = run_comparison(
@@ -331,6 +372,7 @@ def main() -> None:
             rounds_per_shoe=args.rounds_per_shoe,
             starting_bankroll=starting_bankroll,
             trip_rounds=trip_rounds,
+            reshuffle_threshold=reshuffle_threshold,
         )
         print_comparison(summary)
         if args.output is not None:
@@ -347,6 +389,7 @@ def main() -> None:
             rounds_per_shoe=args.rounds_per_shoe,
             starting_bankroll=starting_bankroll,
             trip_rounds=trip_rounds,
+            reshuffle_threshold=reshuffle_threshold,
         )
         print_comparison(summary)
         print("---")
@@ -357,6 +400,17 @@ def main() -> None:
         "smoke": bool(args.smoke),
         "episodes": episodes,
         "rounds_per_shoe": args.rounds_per_shoe,
+        "reshuffle_threshold": (
+            RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
+            if reshuffle_threshold is None
+            else int(reshuffle_threshold)
+        ),
+        "dealt_penetration": dealt_penetration(
+            RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
+            if reshuffle_threshold is None
+            else int(reshuffle_threshold),
+            NUM_DECKS,
+        ),
         "paired_eval": True,
         "play_agent": "RuleAgent",
         "bet_schedule": "TrueCountBetSchedule(default 1-8)",

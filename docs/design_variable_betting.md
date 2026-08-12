@@ -41,6 +41,10 @@ python3 scripts/run_variable_betting_eval.py --smoke
 python3 scripts/run_variable_betting_eval.py --episodes 50000 --seed 42 --bankroll
 python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 \
   --bankroll 200 --trip-rounds 100
+# Penetration / cut-card sweep (counting edge vs dealt fraction):
+python3 scripts/run_penetration_sweep.py --smoke
+python3 scripts/run_penetration_sweep.py --episodes 20000 --seed 42 \
+  --thresholds 13,26,39,52
 ```
 
 Ruin rule: before each round, if cash `<` the scheduled stake, the path/trip stops
@@ -56,7 +60,7 @@ End-to-end RL for bet+play remains optional after the rule+spread baseline shows
 
 ## Rules / bankroll notes
 
-- Penetration reshuffles at ≤26 cards; counting strength is limited by that cut.
+- Penetration reshuffles when remaining cards ≤ the cut (`RESHUFFLE_WHEN_CARDS_REMAINING_BELOW`, default 26 ≈ 75% dealt). Override with `--reshuffle-threshold`; sweep cuts with `scripts/run_penetration_sweep.py`.
 - Bankroll / risk-of-ruin reporting: `agents/bankroll.py` via `--bankroll` on
   `scripts/run_variable_betting_eval.py` (optional; not part of the published §5.5 EV table).
 - Insurance / surrender remain out of scope unless the play chart is extended.

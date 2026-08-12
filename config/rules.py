@@ -6,7 +6,9 @@ DEALER_STAND_THRESHOLD = 17
 # Finite deck settings.
 NUM_DECKS = 2
 
-# Reshuffle only when the remaining shoe is low (not every round).
+# Cut card: reshuffle when remaining cards ≤ this value (not every round).
+# Default 26 on a 2-deck shoe ≈ 75% dealt penetration. Override via
+# BlackjackGame(reshuffle_threshold=…) / CLI --reshuffle-threshold.
 RESHUFFLE_WHEN_CARDS_REMAINING_BELOW = 26
 
 DOUBLE_REWARD_MULTIPLIER = 2

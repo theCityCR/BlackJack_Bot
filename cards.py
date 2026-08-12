@@ -15,6 +15,8 @@ from typing import Iterable, List, Tuple
 
 from config import NUM_DECKS, RESHUFFLE_WHEN_CARDS_REMAINING_BELOW
 
+CARDS_PER_DECK = 52
+
 SINGLE_DECK_CARDS = (
     [1] * 4 +
     [2] * 4 +
@@ -27,6 +29,23 @@ SINGLE_DECK_CARDS = (
     [9] * 4 +
     [10] * 16
 )
+
+
+def shoe_size(num_decks: int = NUM_DECKS) -> int:
+    """Total cards in a full ``num_decks`` shoe."""
+    if num_decks <= 0:
+        raise ValueError("num_decks must be positive")
+    return CARDS_PER_DECK * num_decks
+
+
+def dealt_penetration(
+    reshuffle_threshold: int, num_decks: int = NUM_DECKS
+) -> float:
+    """Fraction of the shoe dealt before the cut (higher = deeper penetration)."""
+    size = shoe_size(num_decks)
+    if not 0 <= reshuffle_threshold <= size:
+        raise ValueError("reshuffle_threshold must be within the shoe size")
+    return (size - reshuffle_threshold) / size
 
 
 class Deck:
@@ -49,7 +68,7 @@ class Deck:
     ):
         if num_decks <= 0:
             raise ValueError("num_decks must be positive")
-        if not 0 <= reshuffle_threshold <= 52 * num_decks:
+        if not 0 <= reshuffle_threshold <= shoe_size(num_decks):
             raise ValueError("reshuffle_threshold must be within the shoe size")
 
         self.num_decks = num_decks

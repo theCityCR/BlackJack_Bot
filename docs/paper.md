@@ -23,7 +23,7 @@ Configured in [`config/`](../config/), implemented in [`game.py`](../game.py) / 
 | Setting | Value |
 |---|---|
 | Shoe | 2 decks, persists across rounds |
-| Penetration | Reshuffle when ≤ 26 cards remain |
+| Penetration | Reshuffle when ≤ 26 cards remain (default; ≈75% dealt on 2 decks). Configurable via `BlackjackGame(reshuffle_threshold=…)` / `--reshuffle-threshold`; sweep counting edge with `scripts/run_penetration_sweep.py`. |
 | Dealer | Stands on all 17s (S17) |
 | Blackjack | Pays 3:2 |
 | Double / split | DAS; re-split to 4 hands; no hit on split aces |

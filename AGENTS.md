@@ -23,6 +23,7 @@ Storefront: [README.md](README.md).
 | `agents/train_*.py` | Thin CLIs |
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
 | `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds` for multi-seed aggregate) |
+| `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 
@@ -38,6 +39,7 @@ python3 -m agents.train_double_dqn --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke --bankroll
+python3 scripts/run_penetration_sweep.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 ## Conventions for agents

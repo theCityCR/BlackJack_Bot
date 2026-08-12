@@ -116,7 +116,13 @@ def episode_rng_seed(base_seed: int, episode_index: int) -> int:
     return (int(base_seed) + int(episode_index) * 1_000_003) & 0x7FFFFFFF
 
 
-def make_episode_game(base_seed: int, episode_index: int):
+def make_episode_game(
+    base_seed: int,
+    episode_index: int,
+    *,
+    reshuffle_threshold: int | None = None,
+    num_decks: int | None = None,
+):
     """Build a fresh game whose opening shoe is fixed by ``(base_seed, episode)``.
 
     Comparison evals should call this (via ``evaluate_greedy(..., seed=...)``)
@@ -126,7 +132,10 @@ def make_episode_game(base_seed: int, episode_index: int):
     from game import BlackjackGame
 
     set_seed(episode_rng_seed(base_seed, episode_index))
-    return BlackjackGame()
+    return BlackjackGame(
+        reshuffle_threshold=reshuffle_threshold,
+        num_decks=num_decks,
+    )
 
 
 def resolve_torch_device(device: str | None = None) -> torch.device:
@@ -343,6 +352,8 @@ def evaluate_greedy(
     num_episodes: int,
     *,
     seed: int | None = None,
+    reshuffle_threshold: int | None = None,
+    num_decks: int | None = None,
 ) -> tuple[float, dict[str, int]]:
     """Run greedy episodes and return mean reward plus outcome distribution.
 
@@ -362,13 +373,25 @@ def evaluate_greedy(
 
     total_reward = 0.0
     distribution: dict[str, int] = defaultdict(int)
-    persistent_game = None if seed is not None else BlackjackGame()
+    persistent_game = (
+        None
+        if seed is not None
+        else BlackjackGame(
+            reshuffle_threshold=reshuffle_threshold,
+            num_decks=num_decks,
+        )
+    )
 
     for episode_index in range(num_episodes):
         if seed is None:
             game = persistent_game
         else:
-            game = make_episode_game(seed, episode_index)
+            game = make_episode_game(
+                seed,
+                episode_index,
+                reshuffle_threshold=reshuffle_threshold,
+                num_decks=num_decks,
+            )
         reward = agent.play_episode(game)
         total_reward += reward
         distribution[categorize_reward(reward)] += 1

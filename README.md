@@ -36,6 +36,7 @@ Train / ablate / plot (details in the study):
 python3 -m agents.train_double_dqn --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
+python3 scripts/run_penetration_sweep.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 

@@ -99,8 +99,26 @@ class PlayerHandState:
 
 
 class BlackjackGame:
-    def __init__(self, deck: Optional[Deck] = None):
-        self.deck = deck if deck is not None else Deck()
+    def __init__(
+        self,
+        deck: Optional[Deck] = None,
+        *,
+        reshuffle_threshold: Optional[int] = None,
+        num_decks: Optional[int] = None,
+    ):
+        if deck is not None and (
+            reshuffle_threshold is not None or num_decks is not None
+        ):
+            raise ValueError("pass deck or shoe kwargs, not both")
+        if deck is not None:
+            self.deck = deck
+        else:
+            deck_kwargs = {}
+            if reshuffle_threshold is not None:
+                deck_kwargs["reshuffle_threshold"] = reshuffle_threshold
+            if num_decks is not None:
+                deck_kwargs["num_decks"] = num_decks
+            self.deck = Deck(**deck_kwargs)
         self.hand_states: List[PlayerHandState] = []
         self.dealer_hand: Optional[Hand] = None
         self.active_hand_index = 0
@@ -109,6 +127,10 @@ class BlackjackGame:
         self.round_bet: float = 1.0
         self.initial_dealer_blackjack = False
         self._shoe_prepared = False
+
+    @property
+    def reshuffle_threshold(self) -> int:
+        return self.deck.reshuffle_threshold
 
     # ------------------------------------------------------------------
     # Compatibility properties

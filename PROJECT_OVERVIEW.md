@@ -19,4 +19,4 @@ Finite-shoe Blackjack RL study. Start with:
 2. ~~Re-eval the rule baseline after the chart tighten.~~ Done (−0.0034 paired; `docs/results/rule_baseline_paired.json`). Multi-seed ablation (§5.4) re-ran A–D with the tightened chart for warm-start; the historical single-seed §5.2 D row still reflects the pre-tighten chart.
 3. ~~Run multi-seed A–D / gap-close with `--seeds` and publish aggregates.~~ Done (`docs/results/multi_seed_ablation_results.json`, `docs/results/multi_seed_gap_close_results.json`).
 4. ~~Variable betting / bankroll~~ — rule + Hi-Lo spread shipped; multi-seed 100k paired aggregate published ([§5.5](docs/paper.md), `docs/results/multi_seed_variable_betting_results.json`). Bankroll path + trip RoR via `--bankroll` (`agents/bankroll.py`).
-5. Configurable penetration and optional actor-critic methods as later follow-ons.
+5. ~~Configurable penetration~~ — cut via `BlackjackGame(reshuffle_threshold=…)` / `--reshuffle-threshold`; counting-edge sweep: `scripts/run_penetration_sweep.py`. Optional actor-critic methods remain later follow-ons.

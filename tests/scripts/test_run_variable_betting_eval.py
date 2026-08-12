@@ -16,11 +16,31 @@ def test_run_comparison_summary_keys():
     assert summary["paired_eval"] is True
     assert summary["episodes"] == 40
     assert summary["rounds_per_shoe"] == 20
+    assert summary["reshuffle_threshold"] == 26
+    assert summary["dealt_penetration"] == pytest.approx(0.75)
     assert "average_reward" in summary["flat_rule"]
     assert "ev_per_unit_wagered" in summary["spread_rule"]
     assert "bet_fraction" in summary["spread_rule"]
     assert "delta_average_reward" in summary
     assert "bankroll" not in summary["spread_rule"]
+
+
+def test_run_comparison_custom_reshuffle_threshold():
+    deep = vb_eval.run_comparison(
+        episodes=80,
+        seed=11,
+        rounds_per_shoe=40,
+        reshuffle_threshold=13,
+    )
+    shallow = vb_eval.run_comparison(
+        episodes=80,
+        seed=11,
+        rounds_per_shoe=40,
+        reshuffle_threshold=52,
+    )
+    assert deep["reshuffle_threshold"] == 13
+    assert shallow["reshuffle_threshold"] == 52
+    assert deep["dealt_penetration"] > shallow["dealt_penetration"]
 
 
 def test_run_comparison_includes_bankroll_when_requested():

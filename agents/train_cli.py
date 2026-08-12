@@ -21,6 +21,7 @@ from config import (
     NEURAL_FINAL_EVAL_EPISODES,
     NEURAL_LEARNING_CURVE_FILENAME,
     NEURAL_TRAINING_EPISODES,
+    RESHUFFLE_WHEN_CARDS_REMAINING_BELOW,
 )
 from game import BlackjackGame
 
@@ -42,6 +43,15 @@ def build_neural_arg_parser(
         "--no-warmstart",
         action="store_true",
         help="Skip rule-agent behavior cloning before RL",
+    )
+    parser.add_argument(
+        "--reshuffle-threshold",
+        type=int,
+        default=None,
+        help=(
+            "Cut card: reshuffle when remaining cards ≤ this value "
+            f"(default {RESHUFFLE_WHEN_CARDS_REMAINING_BELOW} from config)."
+        ),
     )
     if include_device:
         parser.add_argument(
@@ -85,9 +95,11 @@ def run_neural_train_main(
         if include_device and getattr(args, "device", None) is not None:
             factory_kwargs["device"] = args.device
 
-        game = BlackjackGame()
+        game = BlackjackGame(reshuffle_threshold=args.reshuffle_threshold)
         agent = agent_factory(**factory_kwargs)
         print(f"\n=== Train seed={seed} artifacts={out_dir} ===")
+        if args.reshuffle_threshold is not None:
+            print(f"Reshuffle threshold: {args.reshuffle_threshold}")
         run_neural_training_loop(
             agent,
             game,
@@ -103,6 +115,7 @@ def run_neural_train_main(
             agent,
             NEURAL_FINAL_EVAL_EPISODES,
             seed=seed,
+            reshuffle_threshold=args.reshuffle_threshold,
         )
         print(f"Final evaluation episodes: {NEURAL_FINAL_EVAL_EPISODES}")
         print(f"Final average reward:      {final_reward:.4f}")
@@ -140,6 +153,7 @@ def train_neural_agent(
     force_shoe_off: bool = False,
     learning_curve_path: Path | str | None = None,
     agent_kwargs: dict[str, Any] | None = None,
+    reshuffle_threshold: int | None = None,
 ) -> Any:
     """Programmatic train helper used by ablation / gap-close scripts."""
     model_path = agent_results_path(agent_name, model_filename)
@@ -153,7 +167,7 @@ def train_neural_agent(
     if agent_kwargs:
         kwargs.update(agent_kwargs)
 
-    game = BlackjackGame()
+    game = BlackjackGame(reshuffle_threshold=reshuffle_threshold)
     agent = agent_factory(**kwargs)
     run_neural_training_loop(
         agent,
