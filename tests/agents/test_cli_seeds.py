@@ -16,6 +16,7 @@ from agents.cli_seeds import (
     summarize_ablation_runs,
     summarize_benchmark_runs,
     summarize_gap_close_runs,
+    summarize_variable_betting_runs,
 )
 
 
@@ -152,3 +153,28 @@ def test_summarize_benchmark_runs():
     by_name = {row["agent"]: row for row in summary["agents"]}
     assert by_name["Rule-based"]["average_reward"]["mean"] == pytest.approx(-0.015)
     assert by_name["Double DQN"]["average_reward"]["mean"] == pytest.approx(-0.05)
+
+
+def test_summarize_variable_betting_runs():
+    rows = [
+        {
+            "seed": 42,
+            "flat_average_reward": 0.0,
+            "spread_average_reward": 0.04,
+            "spread_ev_per_unit_wagered": 0.02,
+            "spread_average_stake": 2.0,
+            "delta_average_reward": 0.04,
+        },
+        {
+            "seed": 43,
+            "flat_average_reward": -0.02,
+            "spread_average_reward": 0.02,
+            "spread_ev_per_unit_wagered": 0.01,
+            "spread_average_stake": 2.2,
+            "delta_average_reward": 0.04,
+        },
+    ]
+    summary = summarize_variable_betting_runs(rows, seeds=[42, 43])
+    assert summary["spread_average_reward"]["mean"] == pytest.approx(0.03)
+    assert summary["delta_average_reward"]["mean"] == pytest.approx(0.04)
+    assert summary["flat_average_reward"]["n"] == 2

@@ -1,0 +1,131 @@
+{
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "smoke": false,
+  "episodes": 100000,
+  "rounds_per_shoe": 100,
+  "paired_eval": true,
+  "play_agent": "RuleAgent",
+  "bet_schedule": "TrueCountBetSchedule(default 1-8)",
+  "runs": [
+    {
+      "seed": 42,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "flat_average_reward": 0.00501,
+      "spread_average_reward": 0.036615,
+      "spread_ev_per_unit_wagered": 0.015637345131987477,
+      "spread_average_stake": 2.34151,
+      "delta_average_reward": 0.031605,
+      "spread_bet_fraction": {
+        "1": 0.67111,
+        "2": 0.1008,
+        "4": 0.06508,
+        "6": 0.0478,
+        "8": 0.11521
+      },
+      "true_count_fraction": {
+        "<=0": 0.67111,
+        "1": 0.1008,
+        "2": 0.06508,
+        "3": 0.0478,
+        ">=4": 0.11521
+      }
+    },
+    {
+      "seed": 43,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "flat_average_reward": 0.00135,
+      "spread_average_reward": 0.02787,
+      "spread_ev_per_unit_wagered": 0.011884912089177352,
+      "spread_average_stake": 2.34499,
+      "delta_average_reward": 0.02652,
+      "spread_bet_fraction": {
+        "1": 0.66933,
+        "2": 0.10305,
+        "4": 0.06433,
+        "6": 0.04704,
+        "8": 0.11625
+      },
+      "true_count_fraction": {
+        "<=0": 0.66933,
+        "1": 0.10305,
+        "2": 0.06433,
+        "3": 0.04704,
+        ">=4": 0.11625
+      }
+    },
+    {
+      "seed": 44,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "flat_average_reward": -0.00809,
+      "spread_average_reward": 0.015265,
+      "spread_ev_per_unit_wagered": 0.006494473422223735,
+      "spread_average_stake": 2.35046,
+      "delta_average_reward": 0.023355,
+      "spread_bet_fraction": {
+        "1": 0.66868,
+        "2": 0.10337,
+        "4": 0.0635,
+        "6": 0.04728,
+        "8": 0.11717
+      },
+      "true_count_fraction": {
+        "<=0": 0.66868,
+        "1": 0.10337,
+        "2": 0.0635,
+        "3": 0.04728,
+        ">=4": 0.11717
+      }
+    }
+  ],
+  "summary": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "n_seeds": 3,
+    "flat_average_reward": {
+      "mean": -0.000577,
+      "std": 0.006759,
+      "n": 3,
+      "min": -0.00809,
+      "max": 0.00501
+    },
+    "spread_average_reward": {
+      "mean": 0.026583,
+      "std": 0.010733,
+      "n": 3,
+      "min": 0.015265,
+      "max": 0.036615
+    },
+    "spread_ev_per_unit_wagered": {
+      "mean": 0.011339,
+      "std": 0.004596,
+      "n": 3,
+      "min": 0.006494,
+      "max": 0.015637
+    },
+    "spread_average_stake": {
+      "mean": 2.345653,
+      "std": 0.004512,
+      "n": 3,
+      "min": 2.34151,
+      "max": 2.35046
+    },
+    "delta_average_reward": {
+      "mean": 0.02716,
+      "std": 0.004162,
+      "n": 3,
+      "min": 0.023355,
+      "max": 0.031605
+    }
+  },
+  "artifact_note": "Published multi-seed aggregate for rule + Hi-Lo spread (100k paired rounds/seed). Does not modify flat-bet ablation/gap-close tables."
+}

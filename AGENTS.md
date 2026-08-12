@@ -21,7 +21,7 @@ Storefront: [README.md](README.md).
 | `agents/networks.py` / `replay.py` | Shared Dueling net + PER buffer |
 | `agents/train_*.py` | Thin CLIs |
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
-| `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule |
+| `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds` for multi-seed aggregate) |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 

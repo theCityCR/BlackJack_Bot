@@ -179,11 +179,32 @@ python3 scripts/run_ablation_double_dqn.py --seeds 42,43,44 --resume
 python3 scripts/run_hand_only_gap_close.py --seeds 42,43,44 --resume
 ```
 
+### 5.5 Variable betting (rule + Hi-Lo spread)
+
+Separate **product** path from the flat-bet RL study: verified rule play with a Hi-Lo true-count stake schedule (1–8 units). Paired eval uses consecutive rounds on seeded shoes so the count can move (fresh per-episode shoes would pin TC≈0). Protocol: **100,000** rounds × seeds 42–44, 100 rounds/shoe.
+
+| Metric | Mean ± std |
+|---|---:|
+| Flat rule EV/round | −0.0006 ± 0.0068 |
+| Spread rule EV/round | **+0.0266 ± 0.0107** |
+| Δ EV/round (spread − flat) | **+0.0272 ± 0.0042** |
+| Spread EV / unit wagered | +0.0113 ± 0.0046 |
+| Average stake (units) | 2.35 ± 0.00 |
+
+Per-seed spread EV/round: +0.0366 (42), +0.0279 (43), +0.0153 (44). Spread beats flat on every seed; mean EV/round is positive.
+
+Artifact: [`docs/results/multi_seed_variable_betting_results.json`](results/multi_seed_variable_betting_results.json). Design: [`docs/design_variable_betting.md`](design_variable_betting.md).
+
+```bash
+python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 \
+  --output docs/results/multi_seed_variable_betting_results.json
+```
+
 ## 6. Discussion
 
 Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215).
 
-**Limitations.** Flat betting is the published study protocol (§5); variable stake is a separate product path (`docs/design_variable_betting.md`, `scripts/run_variable_betting_eval.py`). No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
+**Limitations.** Flat betting is the published study protocol (§5.1–§5.4); variable stake (§5.5) is a separate product path (`docs/design_variable_betting.md`, `docs/results/multi_seed_variable_betting_results.json`). No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
@@ -207,7 +228,7 @@ Evaluate checkpoints:
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py`.
+Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): §5.5 / [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py --seeds 42,43,44`.
 
 ## License
 

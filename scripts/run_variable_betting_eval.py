@@ -21,11 +21,15 @@ from pathlib import Path
 from typing import Any
 
 from agents.betting import FlatBetSchedule, TrueCountBetSchedule
+from agents.cli_seeds import add_seed_arguments, seeds_from_args, summarize_variable_betting_runs
 from agents.rule import RuleAgent
 from agents.spread_rule import SpreadRuleAgent
 from game import BlackjackGame
 
 DEFAULT_ROUNDS_PER_SHOE = 100
+DEFAULT_MULTI_SEED_OUTPUT = Path(
+    "agents/results/variable_betting/multi_seed_variable_betting_results.json"
+)
 
 
 def make_shoe_session(base_seed: int, session_index: int) -> BlackjackGame:
@@ -145,35 +149,25 @@ def run_comparison(
     }
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--episodes", type=int, default=50_000)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument(
-        "--rounds-per-shoe",
-        type=int,
-        default=DEFAULT_ROUNDS_PER_SHOE,
-        help="Consecutive rounds per seeded shoe session (counting needs penetration)",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Optional JSON path (default: print only; avoid docs/results/)",
-    )
-    parser.add_argument(
-        "--smoke",
-        action="store_true",
-        help="Short paired run (500 episodes) for CI",
-    )
-    args = parser.parse_args()
+def compact_run_row(summary: dict[str, Any]) -> dict[str, Any]:
+    """Flatten a comparison summary for multi-seed aggregation."""
+    flat = summary["flat_rule"]
+    spread = summary["spread_rule"]
+    return {
+        "seed": summary["seed"],
+        "episodes": summary["episodes"],
+        "rounds_per_shoe": summary["rounds_per_shoe"],
+        "flat_average_reward": flat["average_reward"],
+        "spread_average_reward": spread["average_reward"],
+        "spread_ev_per_unit_wagered": spread["ev_per_unit_wagered"],
+        "spread_average_stake": spread["average_stake"],
+        "delta_average_reward": summary["delta_average_reward"],
+        "spread_bet_fraction": spread["bet_fraction"],
+        "true_count_fraction": spread["true_count_fraction"],
+    }
 
-    episodes = 500 if args.smoke else args.episodes
-    _ = RuleAgent
-    summary = run_comparison(
-        episodes, args.seed, rounds_per_shoe=args.rounds_per_shoe
-    )
 
+def print_comparison(summary: dict[str, Any]) -> None:
     flat = summary["flat_rule"]
     spread = summary["spread_rule"]
     print(
@@ -194,10 +188,86 @@ def main() -> None:
     print(f"Spread bet mix: {spread['bet_fraction']}")
     print(f"True-count mix: {spread['true_count_fraction']}")
 
-    if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(summary, indent=2) + "\n")
-        print(f"Wrote {args.output}")
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--episodes", type=int, default=50_000)
+    add_seed_arguments(parser)
+    parser.add_argument(
+        "--rounds-per-shoe",
+        type=int,
+        default=DEFAULT_ROUNDS_PER_SHOE,
+        help="Consecutive rounds per seeded shoe session (counting needs penetration)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "JSON path (single-seed comparison, or multi-seed aggregate). "
+            "Multi-seed default: agents/results/variable_betting/"
+            "multi_seed_variable_betting_results.json"
+        ),
+    )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Short paired run (500 episodes) for CI",
+    )
+    args = parser.parse_args()
+
+    episodes = 500 if args.smoke else args.episodes
+    seeds = seeds_from_args(args)
+    multi = len(seeds) > 1
+    _ = RuleAgent
+
+    if not multi:
+        summary = run_comparison(
+            episodes, seeds[0], rounds_per_shoe=args.rounds_per_shoe
+        )
+        print_comparison(summary)
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(json.dumps(summary, indent=2) + "\n")
+            print(f"Wrote {args.output}")
+        return
+
+    runs: list[dict[str, Any]] = []
+    for seed in seeds:
+        summary = run_comparison(
+            episodes, seed, rounds_per_shoe=args.rounds_per_shoe
+        )
+        print_comparison(summary)
+        print("---")
+        runs.append(compact_run_row(summary))
+
+    payload = {
+        "seeds": seeds,
+        "smoke": bool(args.smoke),
+        "episodes": episodes,
+        "rounds_per_shoe": args.rounds_per_shoe,
+        "paired_eval": True,
+        "play_agent": "RuleAgent",
+        "bet_schedule": "TrueCountBetSchedule(default 1-8)",
+        "runs": runs,
+        "summary": summarize_variable_betting_runs(runs, seeds),
+        "artifact_note": (
+            "Multi-seed aggregate for rule + Hi-Lo spread. "
+            "Copy to docs/results/ only when publishing; "
+            "does not modify flat-bet ablation/gap-close tables."
+        ),
+    }
+    out = args.output or DEFAULT_MULTI_SEED_OUTPUT
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n")
+    print(f"Wrote {out}")
+    s = payload["summary"]
+    print(
+        "Mean ± std EV/round — "
+        f"flat {s['flat_average_reward']['mean']:+.4f}±{s['flat_average_reward']['std']:.4f}, "
+        f"spread {s['spread_average_reward']['mean']:+.4f}±{s['spread_average_reward']['std']:.4f}, "
+        f"delta {s['delta_average_reward']['mean']:+.4f}±{s['delta_average_reward']['std']:.4f}"
+    )
 
 
 if __name__ == "__main__":

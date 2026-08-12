@@ -173,3 +173,25 @@ def summarize_benchmark_runs(
         "agents": agents,
     }
 
+
+def summarize_variable_betting_runs(
+    rows: list[dict[str, Any]],
+    seeds: list[int],
+) -> dict[str, Any]:
+    """Mean/std over paired flat-vs-spread variable-betting run rows."""
+    metrics = _stats_for_keys(
+        rows,
+        [
+            "flat_average_reward",
+            "spread_average_reward",
+            "spread_ev_per_unit_wagered",
+            "spread_average_stake",
+            "delta_average_reward",
+        ],
+    )
+    return {
+        "seeds": list(seeds),
+        "n_seeds": len(seeds),
+        **metrics,
+    }
+

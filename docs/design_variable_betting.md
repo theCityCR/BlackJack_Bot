@@ -27,10 +27,13 @@ Pre-deal bet decision:
 | Spread utilization | Fraction of rounds at each bet size vs true count |
 
 Eval: consecutive rounds on paired seeded shoes (penetration required for
-counting), ≥50k–100k rounds:
+counting), ≥50k–100k rounds. Multi-seed published aggregate (100k × seeds 42–44):
+[`docs/results/multi_seed_variable_betting_results.json`](results/multi_seed_variable_betting_results.json).
 
 ```bash
 python3 scripts/run_variable_betting_eval.py --episodes 50000 --seed 42
+python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 \
+  --output docs/results/multi_seed_variable_betting_results.json
 python3 scripts/run_variable_betting_eval.py --smoke
 ```
 

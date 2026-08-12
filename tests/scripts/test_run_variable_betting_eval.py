@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from agents.spread_rule import SpreadRuleAgent
 import scripts.run_variable_betting_eval as vb_eval
 
@@ -26,3 +29,35 @@ def test_persistent_shoe_eval_uses_raised_bets():
     )
     assert stats["average_stake"] > 1.0
     assert any(float(bet) > 1 for bet in stats["bet_fraction"])
+
+
+def test_compact_run_row_flattens_metrics():
+    summary = vb_eval.run_comparison(episodes=40, seed=5, rounds_per_shoe=20)
+    row = vb_eval.compact_run_row(summary)
+    assert row["seed"] == 5
+    assert "flat_average_reward" in row
+    assert "delta_average_reward" in row
+
+
+def test_main_multi_seed_writes_aggregate(tmp_path: Path, monkeypatch):
+    out = tmp_path / "multi_seed.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "run_variable_betting_eval.py",
+            "--smoke",
+            "--seeds",
+            "7,8",
+            "--rounds-per-shoe",
+            "25",
+            "--output",
+            str(out),
+        ],
+    )
+    vb_eval.main()
+    payload = json.loads(out.read_text())
+    assert payload["seeds"] == [7, 8]
+    assert payload["smoke"] is True
+    assert len(payload["runs"]) == 2
+    assert payload["summary"]["n_seeds"] == 2
+    assert "spread_average_reward" in payload["summary"]
