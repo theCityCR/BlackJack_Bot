@@ -31,6 +31,8 @@ Pre-deal bet decision:
 Eval: consecutive rounds on paired seeded shoes (penetration required for
 counting), ≥50k–100k rounds. Multi-seed published aggregate (100k × seeds 42–44):
 [`docs/results/multi_seed_variable_betting_results.json`](results/multi_seed_variable_betting_results.json).
+Penetration cut sweep (§5.6, 100k × seed 42):
+[`docs/results/penetration_sweep_results.json`](results/penetration_sweep_results.json).
 
 ```bash
 python3 scripts/run_variable_betting_eval.py --episodes 50000 --seed 42
@@ -43,8 +45,10 @@ python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 
   --bankroll 200 --trip-rounds 100
 # Penetration / cut-card sweep (counting edge vs dealt fraction):
 python3 scripts/run_penetration_sweep.py --smoke
-python3 scripts/run_penetration_sweep.py --episodes 20000 --seed 42 \
-  --thresholds 13,26,39,52
+# Published §5.6 protocol:
+python3 scripts/run_penetration_sweep.py --episodes 100000 --seed 42 \
+  --thresholds 13,26,39,52 \
+  --output docs/results/penetration_sweep_results.json
 ```
 
 Ruin rule: before each round, if cash `<` the scheduled stake, the path/trip stops
@@ -66,7 +70,7 @@ python3 scripts/run_variable_betting_eval.py --smoke \
 
 ## Rules / bankroll notes
 
-- Penetration reshuffles when remaining cards ≤ the cut (`RESHUFFLE_WHEN_CARDS_REMAINING_BELOW`, default 26 ≈ 75% dealt). Override with `--reshuffle-threshold`; sweep cuts with `scripts/run_penetration_sweep.py`.
+- Penetration reshuffles when remaining cards ≤ the cut (`RESHUFFLE_WHEN_CARDS_REMAINING_BELOW`, default 26 ≈ 75% dealt). Override with `--reshuffle-threshold`; published cut sweep is §5.6 / `scripts/run_penetration_sweep.py`.
 - Bankroll / risk-of-ruin reporting: `agents/bankroll.py` via `--bankroll` on
   `scripts/run_variable_betting_eval.py` (optional; not part of the published §5.5 EV table).
 - Insurance / surrender remain out of scope unless the play chart is extended.

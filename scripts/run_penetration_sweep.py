@@ -5,6 +5,8 @@ Lower ``--thresholds`` ⇒ deeper dealt penetration ⇒ more time at extreme
 true counts. Default study cut remains 26 (≈75% on a 2-deck shoe).
 
 Does not modify published flat-bet or §5.5 artifacts under docs/results/.
+Published §5.6 protocol writes ``docs/results/penetration_sweep_results.json``
+(100k rounds, seed 42, cuts 13/26/39/52).
 """
 
 from __future__ import annotations
@@ -67,8 +69,10 @@ def sweep_thresholds(
         "runs": rows,
         "artifact_note": (
             "Penetration sweep for rule + Hi-Lo spread. "
-            "Copy to docs/results/ only when publishing; "
-            "does not modify published study tables."
+            "Published §5.6 uses --episodes 100000 --seed 42 "
+            "--thresholds 13,26,39,52 "
+            "--output docs/results/penetration_sweep_results.json; "
+            "does not modify flat-bet or multi-seed §5.5 tables."
         ),
     }
 

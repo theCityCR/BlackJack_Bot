@@ -1,0 +1,123 @@
+{
+  "seeds": [
+    42
+  ],
+  "episodes": 100000,
+  "rounds_per_shoe": 100,
+  "num_decks": 2,
+  "default_reshuffle_threshold": 26,
+  "thresholds": [
+    13,
+    26,
+    39,
+    52
+  ],
+  "runs": [
+    {
+      "seed": 42,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "reshuffle_threshold": 13,
+      "dealt_penetration": 0.875,
+      "flat_average_reward": 0.00218,
+      "spread_average_reward": 0.03699,
+      "spread_ev_per_unit_wagered": 0.014684748346526713,
+      "spread_average_stake": 2.51894,
+      "delta_average_reward": 0.03481,
+      "spread_bet_fraction": {
+        "1": 0.65776,
+        "2": 0.08733,
+        "4": 0.06536,
+        "6": 0.04566,
+        "8": 0.14389
+      },
+      "true_count_fraction": {
+        "<=0": 0.65776,
+        "1": 0.08733,
+        "2": 0.06536,
+        "3": 0.04566,
+        ">=4": 0.14389
+      }
+    },
+    {
+      "seed": 42,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "reshuffle_threshold": 26,
+      "dealt_penetration": 0.75,
+      "flat_average_reward": 0.00501,
+      "spread_average_reward": 0.036615,
+      "spread_ev_per_unit_wagered": 0.015637345131987477,
+      "spread_average_stake": 2.34151,
+      "delta_average_reward": 0.031605,
+      "spread_bet_fraction": {
+        "1": 0.67111,
+        "2": 0.1008,
+        "4": 0.06508,
+        "6": 0.0478,
+        "8": 0.11521
+      },
+      "true_count_fraction": {
+        "<=0": 0.67111,
+        "1": 0.1008,
+        "2": 0.06508,
+        "3": 0.0478,
+        ">=4": 0.11521
+      }
+    },
+    {
+      "seed": 42,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "reshuffle_threshold": 39,
+      "dealt_penetration": 0.625,
+      "flat_average_reward": 0.00427,
+      "spread_average_reward": 0.027365,
+      "spread_ev_per_unit_wagered": 0.01271454192337357,
+      "spread_average_stake": 2.15226,
+      "delta_average_reward": 0.023095,
+      "spread_bet_fraction": {
+        "1": 0.6952,
+        "2": 0.10199,
+        "4": 0.06953,
+        "6": 0.04564,
+        "8": 0.08764
+      },
+      "true_count_fraction": {
+        "<=0": 0.6952,
+        "1": 0.10199,
+        "2": 0.06953,
+        "3": 0.04564,
+        ">=4": 0.08764
+      }
+    },
+    {
+      "seed": 42,
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "reshuffle_threshold": 52,
+      "dealt_penetration": 0.5,
+      "flat_average_reward": 0.00531,
+      "spread_average_reward": 0.02357,
+      "spread_ev_per_unit_wagered": 0.012112647104167738,
+      "spread_average_stake": 1.9459,
+      "delta_average_reward": 0.018260000000000002,
+      "spread_bet_fraction": {
+        "1": 0.72382,
+        "2": 0.10601,
+        "4": 0.06745,
+        "6": 0.04075,
+        "8": 0.06197
+      },
+      "true_count_fraction": {
+        "<=0": 0.72382,
+        "1": 0.10601,
+        "2": 0.06745,
+        "3": 0.04075,
+        ">=4": 0.06197
+      }
+    }
+  ],
+  "artifact_note": "Published §5.6 penetration sweep (100k rounds, seed 42). Does not modify flat-bet or multi-seed §5.5 tables.",
+  "smoke": false
+}

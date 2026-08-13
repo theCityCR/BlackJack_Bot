@@ -200,11 +200,32 @@ python3 scripts/run_variable_betting_eval.py --episodes 100000 --seeds 42,43,44 
   --output docs/results/multi_seed_variable_betting_results.json
 ```
 
+### 5.6 Penetration sweep (rule + Hi-Lo spread)
+
+Same paired rule / Hi-Lo policies as §5.5, varying the reshuffle cut (remaining-card threshold). Lower cut ⇒ deeper dealt penetration ⇒ more rounds at extreme true counts. Protocol: **100,000** rounds, seed **42**, 100 rounds/shoe; cuts 13 / 26 / 39 / 52 (≈87.5% / 75% / 62.5% / 50% dealt on a 2-deck shoe). Cut 26 is the study default and matches the §5.5 seed-42 row.
+
+| Cut (cards left) | Dealt pen. | Flat EV/round | Spread EV/round | Δ EV/round |
+|---|---:|---:|---:|---:|
+| 13 | 87.5% | +0.0022 | **+0.0370** | **+0.0348** |
+| 26 (default) | 75.0% | +0.0050 | +0.0366 | +0.0316 |
+| 39 | 62.5% | +0.0043 | +0.0274 | +0.0231 |
+| 52 | 50.0% | +0.0053 | +0.0236 | +0.0183 |
+
+Spread EV/round and Δ both rise with deeper penetration; the max stake share (≥8 units) increases from 6.2% at cut 52 to 14.4% at cut 13. Flat EV stays near zero across cuts on this seed.
+
+Artifact: [`docs/results/penetration_sweep_results.json`](results/penetration_sweep_results.json).
+
+```bash
+python3 scripts/run_penetration_sweep.py --episodes 100000 --seed 42 \
+  --thresholds 13,26,39,52 \
+  --output docs/results/penetration_sweep_results.json
+```
+
 ## 6. Discussion
 
-Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215).
+Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215). On the product path, deeper dealt penetration (§5.6) monotonically increases rule+Hi-Lo spread EV and Δ vs flat on seed 42.
 
-**Limitations.** Flat betting is the published study protocol (§5.1–§5.4); variable stake (§5.5) is a separate product path (`docs/design_variable_betting.md`, `docs/results/multi_seed_variable_betting_results.json`). No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
+**Limitations.** Flat betting is the published study protocol (§5.1–§5.4); variable stake (§5.5) and the penetration cut sweep (§5.6) are a separate product path (`docs/design_variable_betting.md`, `docs/results/multi_seed_variable_betting_results.json`, `docs/results/penetration_sweep_results.json`). §5.6 is single-seed (42) at 100k rounds. No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
@@ -228,7 +249,7 @@ Evaluate checkpoints:
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): §5.5 / [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py --seeds 42,43,44`.
+Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): §5.5 / [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py --seeds 42,43,44`. Penetration cut sweep: §5.6 / `scripts/run_penetration_sweep.py`.
 
 ## License
 

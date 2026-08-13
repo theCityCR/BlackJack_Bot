@@ -26,7 +26,7 @@ Storefront: [README.md](README.md).
 | `agents/train_*.py` | Thin CLIs |
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
 | `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds`; optional `--pg-agent`) |
-| `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration |
+| `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration (§5.6) |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 
