@@ -16,8 +16,17 @@ def warmstart_from_spread_rule(
     agent: Any,
     game: Any,
     num_episodes: int,
+    *,
+    bet_only: bool | None = None,
 ) -> None:
-    """Clone Hi-Lo bet + rule play into ``agent`` via supervised CE."""
+    """Clone Hi-Lo bet + rule play into ``agent`` via supervised CE.
+
+    When ``bet_only`` is True (default: agent's ``freeze_play``), only the bet
+    head is cloned; play stays on the rule chart at train/eval time.
+    """
+    clone_play = not (
+        agent.freeze_play if bet_only is None else bool(bet_only)
+    )
     teacher = SpreadRuleAgent()
     total_bet_loss = 0.0
     total_play_loss = 0.0
@@ -45,22 +54,23 @@ def warmstart_from_spread_rule(
             while not done:
                 available = game.available_actions()
                 target_action = teacher.choose_action(state, available)
-                legal = agent.legal_action_indices(available)
-                features = agent.encode_state(state).unsqueeze(0).to(agent.device)
-                logits, _ = agent.model.play_logits_value(features)
-                masked = agent.mask_illegal_logits(logits[0], legal).unsqueeze(0)
-                play_loss = play_loss + F.cross_entropy(
-                    masked,
-                    torch.tensor(
-                        [ACTION_TO_INDEX[target_action]],
-                        dtype=torch.long,
-                        device=agent.device,
-                    ),
-                )
-                n_play += 1
+                if clone_play:
+                    legal = agent.legal_action_indices(available)
+                    features = agent.encode_state(state).unsqueeze(0).to(agent.device)
+                    logits, _ = agent.model.play_logits_value(features)
+                    masked = agent.mask_illegal_logits(logits[0], legal).unsqueeze(0)
+                    play_loss = play_loss + F.cross_entropy(
+                        masked,
+                        torch.tensor(
+                            [ACTION_TO_INDEX[target_action]],
+                            dtype=torch.long,
+                            device=agent.device,
+                        ),
+                    )
+                    n_play += 1
                 state, _, done = game.step(target_action)
 
-        loss = bet_loss + play_loss
+        loss = bet_loss + (play_loss if clone_play else 0.0)
         agent.optimizer.zero_grad()
         loss.backward()
         agent._clip_grads()
@@ -75,8 +85,9 @@ def warmstart_from_spread_rule(
 
     avg_bet = total_bet_loss / max(1, bet_steps)
     avg_play = total_play_loss / max(1, play_steps)
+    mode = "bet-only" if not clone_play else "bet+play"
     print(
-        f"Warm-start: cloned spread rule for {num_episodes} episodes "
+        f"Warm-start ({mode}): cloned spread rule for {num_episodes} episodes "
         f"(bet_ce={avg_bet:.4f}, play_ce={avg_play:.4f}, "
         f"steps={agent.training_steps})"
     )

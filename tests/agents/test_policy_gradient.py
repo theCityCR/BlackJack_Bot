@@ -121,3 +121,69 @@ def test_warmstart_from_spread_rule_runs():
     before = agent.training_steps
     warmstart_from_spread_rule(agent, BlackjackGame(), num_episodes=3)
     assert agent.training_steps == before + 3
+
+
+def test_freeze_play_uses_rule_chart_and_skips_play_updates():
+    agent = A2CAgent(freeze_play=True, teacher_bet_ce_coef=0.1)
+    assert agent.use_rule_play is True
+    assert all(not p.requires_grad for p in agent.model.play_policy.parameters())
+    assert any(p.requires_grad for p in agent.model.bet_policy.parameters())
+
+    game = BlackjackGame()
+    trajectory = agent.collect_trajectory(game)
+    assert trajectory.play == []
+    assert 0 <= trajectory.bet.teacher_bet_index < BET_ACTION_COUNT
+
+    before = {
+        name: param.detach().clone()
+        for name, param in agent.model.named_parameters()
+        if name.startswith("play_")
+    }
+    agent.update_from_trajectory(trajectory)
+    after = dict(agent.model.named_parameters())
+    for name, prior in before.items():
+        assert torch.allclose(prior, after[name])
+
+
+def test_bet_focus_cli_defaults():
+    from agents.train_pg_cli import build_pg_arg_parser, resolve_pg_train_settings
+    from config import (
+        PG_BET_FOCUS_BET_ENTROPY_COEF,
+        PG_BET_FOCUS_TEACHER_BET_CE_COEF,
+        PG_BET_FOCUS_TRAINING_EPISODES,
+        PG_BET_FOCUS_WARMSTART_EPISODES,
+    )
+
+    parser = build_pg_arg_parser("test")
+    args = parser.parse_args(["--bet-focus"])
+    settings = resolve_pg_train_settings(args)
+    assert settings["episodes"] == PG_BET_FOCUS_TRAINING_EPISODES
+    assert settings["warmstart_episodes"] == PG_BET_FOCUS_WARMSTART_EPISODES
+    assert settings["agent_kwargs"]["freeze_play"] is True
+    assert (
+        settings["agent_kwargs"]["bet_entropy_coef"] == PG_BET_FOCUS_BET_ENTROPY_COEF
+    )
+    assert (
+        settings["agent_kwargs"]["teacher_bet_ce_coef"]
+        == PG_BET_FOCUS_TEACHER_BET_CE_COEF
+    )
+
+
+def test_freeze_play_checkpoint_restores_rule_play(tmp_path: Path):
+    agent = A2CAgent(freeze_play=True, teacher_bet_ce_coef=0.05)
+    agent.train_one_episode(BlackjackGame())
+    path = tmp_path / "a2c_freeze.pt"
+    save_policy_checkpoint(
+        agent,
+        path,
+        extra={
+            "freeze_play": True,
+            "use_rule_play": True,
+            "teacher_bet_ce_coef": 0.05,
+        },
+    )
+    loaded, payload = load_policy_checkpoint(A2CAgent, path)
+    assert payload["freeze_play"] is True
+    assert loaded.freeze_play is True
+    assert loaded.use_rule_play is True
+    assert loaded.teacher_bet_ce_coef == 0.05

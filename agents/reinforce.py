@@ -6,11 +6,15 @@ import torch
 
 from agents.policy_base import BetPlayPolicyAgent, EpisodeTrajectory
 from config import (
+    PG_BET_ENTROPY_COEF,
     PG_DISCOUNT_FACTOR,
     PG_ENTROPY_COEF,
+    PG_FREEZE_PLAY,
     PG_LEARNING_RATE,
     PG_MAX_GRAD_NORM,
+    PG_PLAY_ENTROPY_COEF,
     PG_REINFORCE_BASELINE_MOMENTUM,
+    PG_TEACHER_BET_CE_COEF,
 )
 
 
@@ -23,6 +27,10 @@ class ReinforceAgent(BetPlayPolicyAgent):
         learning_rate: float = PG_LEARNING_RATE,
         discount_factor: float = PG_DISCOUNT_FACTOR,
         entropy_coef: float = PG_ENTROPY_COEF,
+        bet_entropy_coef: float | None = PG_BET_ENTROPY_COEF,
+        play_entropy_coef: float | None = PG_PLAY_ENTROPY_COEF,
+        teacher_bet_ce_coef: float = PG_TEACHER_BET_CE_COEF,
+        freeze_play: bool = PG_FREEZE_PLAY,
         max_grad_norm: float = PG_MAX_GRAD_NORM,
         baseline_momentum: float = PG_REINFORCE_BASELINE_MOMENTUM,
         device: str | None = None,
@@ -31,6 +39,10 @@ class ReinforceAgent(BetPlayPolicyAgent):
             learning_rate=learning_rate,
             discount_factor=discount_factor,
             entropy_coef=entropy_coef,
+            bet_entropy_coef=bet_entropy_coef,
+            play_entropy_coef=play_entropy_coef,
+            teacher_bet_ce_coef=teacher_bet_ce_coef,
+            freeze_play=freeze_play,
             critic_coef=0.0,
             max_grad_norm=max_grad_norm,
             device=device,
@@ -61,19 +73,28 @@ class ReinforceAgent(BetPlayPolicyAgent):
         bet_log_prob, _, bet_entropy = self.evaluate_bet_log_probs(bet_batch)
         bet_adv = self._center(bet_batch["returns"])
         loss = -(bet_log_prob * bet_adv.detach()).mean()
-        entropy = bet_entropy.mean()
+        entropy_bonus = self.bet_entropy_coef * bet_entropy.mean()
+        teacher_ce = self.teacher_bet_ce_loss(bet_batch)
 
-        if play_batch is not None:
+        if play_batch is not None and not self.freeze_play:
             play_log_prob, _, play_entropy = self.evaluate_play_log_probs(play_batch)
             play_adv = self._center(play_batch["returns"])
             loss = loss - (play_log_prob * play_adv.detach()).mean()
-            entropy = entropy + play_entropy.mean()
+            entropy_bonus = entropy_bonus + self.play_entropy_coef * play_entropy.mean()
 
-        loss = loss - self.entropy_coef * entropy
+        loss = (
+            loss
+            - entropy_bonus
+            + self.teacher_bet_ce_coef * teacher_ce
+        )
 
         self.optimizer.zero_grad()
         loss.backward()
         self._clip_grads()
         self.optimizer.step()
         self.training_steps += 1
-        return {"loss": float(loss.item()), "entropy": float(entropy.item())}
+        return {
+            "loss": float(loss.item()),
+            "entropy_bonus": float(entropy_bonus.item()),
+            "teacher_bet_ce": float(teacher_ce.item()),
+        }

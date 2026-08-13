@@ -62,8 +62,11 @@ Two-level demo (shipped):
 
 End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinforce.py`, `a2c.py`, `ppo.py` with shared `agents/policy_base.py`. Discrete stakes `{1..BET_MAX}` then masked play actions. Warm-start clones SpreadRule via CE (`agents/pg_warmstart.py`). Published bake-off vs rule+Hi-Lo (§5.7): [`docs/results/pg_spread_bakeoff_results.json`](results/pg_spread_bakeoff_results.json).
 
+**Bet-focus training** (post–§5.7 stake-collapse follow-on): `--bet-focus` enables frozen rule play, higher bet-head entropy, soft CE retention toward the Hi-Lo teacher, 20k warm-start, and a 500k episode budget. Individual knobs: `--freeze-play`, `--bet-entropy-coef`, `--teacher-bet-ce-coef`, `--warmstart-episodes`.
+
 ```bash
 python3 -m agents.train_a2c --episodes 1000 --seed 42 --no-warmstart
+python3 -m agents.train_a2c --bet-focus --seed 42
 python3 scripts/run_variable_betting_eval.py --smoke \
   --pg-agent a2c --pg-checkpoint agents/results/a2c/a2c_bet_play_model.pt
 python3 scripts/run_pg_spread_bakeoff.py --smoke

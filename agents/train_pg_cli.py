@@ -18,11 +18,21 @@ from agents.common import (
 from agents.learning_curves import LearningCurveLogger
 from agents.pg_warmstart import warmstart_from_spread_rule
 from config import (
+    PG_BET_ENTROPY_COEF,
+    PG_BET_FOCUS_BET_ENTROPY_COEF,
+    PG_BET_FOCUS_FREEZE_PLAY,
+    PG_BET_FOCUS_PLAY_ENTROPY_COEF,
+    PG_BET_FOCUS_TEACHER_BET_CE_COEF,
+    PG_BET_FOCUS_TRAINING_EPISODES,
+    PG_BET_FOCUS_WARMSTART_EPISODES,
     PG_CHECKPOINT_EVAL_EPISODES,
     PG_FINAL_EVAL_EPISODES,
+    PG_FREEZE_PLAY,
     PG_LEARNING_CURVE_ENABLED,
     PG_LEARNING_CURVE_FILENAME,
+    PG_PLAY_ENTROPY_COEF,
     PG_PRINT_INTERVAL,
+    PG_TEACHER_BET_CE_COEF,
     PG_TRAINING_EPISODES,
     PG_WARMSTART_ENABLED,
     PG_WARMSTART_EPISODES,
@@ -33,12 +43,57 @@ from game import BlackjackGame
 
 def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--episodes", type=int, default=PG_TRAINING_EPISODES)
+    parser.add_argument("--episodes", type=int, default=None)
     add_seed_arguments(parser)
     parser.add_argument(
         "--no-warmstart",
         action="store_true",
         help="Skip SpreadRuleAgent behavior cloning before RL",
+    )
+    parser.add_argument(
+        "--warmstart-episodes",
+        type=int,
+        default=None,
+        help=(
+            "Behavior-cloning episodes before RL "
+            f"(default {PG_WARMSTART_EPISODES}; "
+            f"{PG_BET_FOCUS_WARMSTART_EPISODES} with --bet-focus)."
+        ),
+    )
+    parser.add_argument(
+        "--bet-focus",
+        action="store_true",
+        help=(
+            "Stake-retention preset: freeze rule play, higher bet entropy, "
+            "teacher bet CE, longer warm-start / train budget."
+        ),
+    )
+    parser.add_argument(
+        "--freeze-play",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Train bet head only; rule chart plays (default: on with --bet-focus).",
+    )
+    parser.add_argument(
+        "--bet-entropy-coef",
+        type=float,
+        default=None,
+        help=f"Entropy bonus on the bet head (default {PG_BET_ENTROPY_COEF}).",
+    )
+    parser.add_argument(
+        "--play-entropy-coef",
+        type=float,
+        default=None,
+        help=f"Entropy bonus on the play head (default {PG_PLAY_ENTROPY_COEF}).",
+    )
+    parser.add_argument(
+        "--teacher-bet-ce-coef",
+        type=float,
+        default=None,
+        help=(
+            "CE pull toward SpreadRule bet during RL "
+            f"(default {PG_TEACHER_BET_CE_COEF})."
+        ),
     )
     parser.add_argument(
         "--reshuffle-threshold",
@@ -55,6 +110,68 @@ def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
         help="Torch device (cpu, mps, cuda). Default: CUDA if available else CPU.",
     )
     return parser
+
+
+def resolve_pg_train_settings(args: argparse.Namespace) -> dict[str, Any]:
+    """Resolve episode budget and agent kwargs from CLI flags."""
+    bet_focus = bool(args.bet_focus)
+    freeze_play = (
+        PG_BET_FOCUS_FREEZE_PLAY
+        if args.freeze_play is None and bet_focus
+        else (PG_FREEZE_PLAY if args.freeze_play is None else bool(args.freeze_play))
+    )
+    bet_entropy = (
+        PG_BET_FOCUS_BET_ENTROPY_COEF
+        if args.bet_entropy_coef is None and bet_focus
+        else (
+            PG_BET_ENTROPY_COEF
+            if args.bet_entropy_coef is None
+            else float(args.bet_entropy_coef)
+        )
+    )
+    play_entropy = (
+        PG_BET_FOCUS_PLAY_ENTROPY_COEF
+        if args.play_entropy_coef is None and bet_focus
+        else (
+            PG_PLAY_ENTROPY_COEF
+            if args.play_entropy_coef is None
+            else float(args.play_entropy_coef)
+        )
+    )
+    teacher_ce = (
+        PG_BET_FOCUS_TEACHER_BET_CE_COEF
+        if args.teacher_bet_ce_coef is None and bet_focus
+        else (
+            PG_TEACHER_BET_CE_COEF
+            if args.teacher_bet_ce_coef is None
+            else float(args.teacher_bet_ce_coef)
+        )
+    )
+    if args.episodes is not None:
+        episodes = int(args.episodes)
+    elif bet_focus:
+        episodes = PG_BET_FOCUS_TRAINING_EPISODES
+    else:
+        episodes = PG_TRAINING_EPISODES
+
+    if args.warmstart_episodes is not None:
+        warmstart_episodes = int(args.warmstart_episodes)
+    elif bet_focus:
+        warmstart_episodes = PG_BET_FOCUS_WARMSTART_EPISODES
+    else:
+        warmstart_episodes = PG_WARMSTART_EPISODES
+
+    return {
+        "episodes": episodes,
+        "warmstart_episodes": warmstart_episodes,
+        "bet_focus": bet_focus,
+        "agent_kwargs": {
+            "freeze_play": freeze_play,
+            "bet_entropy_coef": bet_entropy,
+            "play_entropy_coef": play_entropy,
+            "teacher_bet_ce_coef": teacher_ce,
+        },
+    }
 
 
 def run_pg_training_loop(
@@ -135,6 +252,7 @@ def run_pg_train_main(
     except ValueError as exc:
         parser.error(str(exc))
 
+    settings = resolve_pg_train_settings(args)
     multi = len(seeds) > 1
     aggregate: list[dict[str, Any]] = []
     agent_base = agent_results_path(agent_name, model_filename).parent
@@ -146,21 +264,41 @@ def run_pg_train_main(
         model_path = out_dir / model_filename
         curve_path = out_dir / PG_LEARNING_CURVE_FILENAME
 
-        factory_kwargs: dict[str, Any] = {}
+        factory_kwargs: dict[str, Any] = dict(settings["agent_kwargs"])
         if args.device is not None:
             factory_kwargs["device"] = args.device
 
         game = BlackjackGame(reshuffle_threshold=args.reshuffle_threshold)
         agent = agent_factory(**factory_kwargs)
         print(f"\n=== Train seed={seed} artifacts={out_dir} ===")
+        print(
+            f"bet_focus={settings['bet_focus']}  "
+            f"freeze_play={factory_kwargs['freeze_play']}  "
+            f"bet_entropy={factory_kwargs['bet_entropy_coef']}  "
+            f"teacher_ce={factory_kwargs['teacher_bet_ce_coef']}  "
+            f"warmstart_episodes="
+            f"{0 if args.no_warmstart else settings['warmstart_episodes']}"
+        )
         run_pg_training_loop(
             agent,
             game,
-            args.episodes,
+            settings["episodes"],
             warmstart=not args.no_warmstart,
+            warmstart_episodes=settings["warmstart_episodes"],
             learning_curve_path=curve_path,
         )
-        save_policy_checkpoint(agent, model_path)
+        save_policy_checkpoint(
+            agent,
+            model_path,
+            extra={
+                "freeze_play": bool(agent.freeze_play),
+                "use_rule_play": bool(agent.use_rule_play),
+                "bet_entropy_coef": float(agent.bet_entropy_coef),
+                "play_entropy_coef": float(agent.play_entropy_coef),
+                "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
+                "bet_focus": settings["bet_focus"],
+            },
+        )
         print(f"Saved checkpoint: {model_path}")
 
         mean_reward, distribution = evaluate_greedy(
@@ -175,12 +313,20 @@ def run_pg_train_main(
         summary = {
             "agent": agent_name,
             "seed": seed,
-            "episodes": args.episodes,
+            "episodes": settings["episodes"],
             "final_eval_episodes": PG_FINAL_EVAL_EPISODES,
             "mean_reward": mean_reward,
             "distribution": dict(distribution),
             "checkpoint": str(model_path),
             "warmstart": not args.no_warmstart,
+            "warmstart_episodes": (
+                0 if args.no_warmstart else settings["warmstart_episodes"]
+            ),
+            "bet_focus": settings["bet_focus"],
+            "freeze_play": bool(agent.freeze_play),
+            "bet_entropy_coef": float(agent.bet_entropy_coef),
+            "play_entropy_coef": float(agent.play_entropy_coef),
+            "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
             "reshuffle_threshold": game.reshuffle_threshold,
         }
         summary_path = out_dir / "train_summary.json"
@@ -200,6 +346,7 @@ def train_pg_agent(
     agent_factory: Callable[..., Any],
     num_episodes: int = PG_TRAINING_EPISODES,
     warmstart: bool | None = None,
+    warmstart_episodes: int | None = None,
     learning_curve_path: Path | str | None = None,
     agent_kwargs: dict[str, Any] | None = None,
     reshuffle_threshold: int | None = None,
@@ -215,9 +362,18 @@ def train_pg_agent(
         game,
         num_episodes,
         warmstart=warmstart,
+        warmstart_episodes=warmstart_episodes,
         learning_curve_path=curve,
     )
     save_policy_checkpoint(
-        agent, agent_results_path(agent_name, model_filename)
+        agent,
+        agent_results_path(agent_name, model_filename),
+        extra={
+            "freeze_play": bool(agent.freeze_play),
+            "use_rule_play": bool(agent.use_rule_play),
+            "bet_entropy_coef": float(agent.bet_entropy_coef),
+            "play_entropy_coef": float(agent.play_entropy_coef),
+            "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
+        },
     )
     return agent
