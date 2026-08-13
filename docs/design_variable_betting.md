@@ -62,7 +62,7 @@ Two-level demo (shipped):
 
 End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinforce.py`, `a2c.py`, `ppo.py` with shared `agents/policy_base.py`. Discrete stakes `{1..BET_MAX}` then masked play actions. Warm-start clones SpreadRule via CE (`agents/pg_warmstart.py`). Published bake-off vs rule+Hi-Lo (§5.7): [`docs/results/pg_spread_bakeoff_results.json`](results/pg_spread_bakeoff_results.json).
 
-**Bet-focus training** (post–§5.7 stake-collapse follow-on): `--bet-focus` enables frozen rule play, higher bet-head entropy, soft CE retention toward the Hi-Lo teacher, 20k warm-start, and a 500k episode budget. Artifacts go under `agents/results/<agent>/bet_focus/`. Lean mid/final probes (bake-off does the heavy eval). Mid-run checkpoints save at each probe; continue with `--resume`. Parallel launch (detached by default so Cursor shell abort does not kill children): `python3 scripts/run_pg_bet_focus_train.py` / `--resume`.
+**Bet-focus training** (post–§5.7 stake-collapse follow-on; published [§5.8](paper.md)): `--bet-focus` enables frozen rule play, higher bet-head entropy, soft CE retention toward the Hi-Lo teacher, 20k warm-start, and a 500k episode budget. Artifacts go under `agents/results/<agent>/bet_focus/`. Lean mid/final probes (bake-off does the heavy eval). Mid-run checkpoints save at each probe; continue with `--resume`. Parallel launch (detached by default so Cursor shell abort does not kill children): `python3 scripts/run_pg_bet_focus_train.py` / `--resume`. Paired bake-off: [`docs/results/pg_bet_focus_bakeoff_results.json`](results/pg_bet_focus_bakeoff_results.json).
 
 ```bash
 python3 -m agents.train_a2c --episodes 1000 --seed 42 --no-warmstart
@@ -71,6 +71,7 @@ python3 scripts/run_pg_bet_focus_train.py
 python3 scripts/run_variable_betting_eval.py --smoke \
   --pg-agent a2c --pg-checkpoint agents/results/a2c/bet_focus/a2c_bet_play_model.pt
 python3 scripts/run_pg_spread_bakeoff.py --smoke
+python3 scripts/run_pg_spread_bakeoff.py --bet-focus --episodes 100000 --seeds 42,43,44
 # Published §5.7 protocol (after full 200k trains):
 python3 scripts/run_pg_spread_bakeoff.py --episodes 100000 --seeds 42,43,44 \
   --output docs/results/pg_spread_bakeoff_results.json
@@ -86,4 +87,4 @@ python3 scripts/run_pg_spread_bakeoff.py --episodes 100000 --seeds 42,43,44 \
 ## Non-goals
 
 - No change to published flat-bet ablation or gap-close tables under `docs/results/`.
-- PG checkpoints live under `agents/results/<reinforce|a2c|ppo>/` (gitignored); the §5.7 aggregate JSON is the published claim.
+- PG checkpoints live under `agents/results/<reinforce|a2c|ppo>/` (gitignored); §5.7 / §5.8 aggregate JSONs are the published claims.

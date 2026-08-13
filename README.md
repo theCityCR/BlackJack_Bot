@@ -8,7 +8,7 @@ Finite-shoe Blackjack as a controlled RL benchmark: does richer shoe composition
 
 Under a **shared 200k-episode Double DQN protocol**, hand-only training (−0.0325) beats full shoe-from-scratch (−0.0877); curriculum + warm-start (−0.0513) lands in between. The rule baseline remains ahead (−0.0103). Details: [docs/paper.md](docs/paper.md) §5.2.
 
-**Takeaway:** under equal compute, state design and initialization matter more than architecture depth—hand-only wins the ablation, yet still trails the rule baseline. Ablation table rule EV (−0.0103) is historical; the verified 2-deck S17 DAS chart is −0.0034 under paired eval ([§5.3](docs/paper.md)). Multi-seed mean±std (seeds 42–44): [§5.4](docs/paper.md). Rule + Hi-Lo spread (product path) is **+0.0266 ± 0.0107** EV/round over 100k×3 seeds ([§5.5](docs/paper.md)); deeper reshuffle cuts strengthen that edge ([§5.6](docs/paper.md)). Bet+play PG agents (200k) do not beat the spread baseline ([§5.7](docs/paper.md)).
+**Takeaway:** under equal compute, state design and initialization matter more than architecture depth—hand-only wins the ablation, yet still trails the rule baseline. Ablation table rule EV (−0.0103) is historical; the verified 2-deck S17 DAS chart is −0.0034 under paired eval ([§5.3](docs/paper.md)). Multi-seed mean±std (seeds 42–44): [§5.4](docs/paper.md). Rule + Hi-Lo spread (product path) is **+0.0266 ± 0.0107** EV/round over 100k×3 seeds ([§5.5](docs/paper.md)); deeper reshuffle cuts strengthen that edge ([§5.6](docs/paper.md)). Joint bet+play PG (200k) collapses stakes ([§5.7](docs/paper.md)); bet-focus PG (500k, freeze play) recovers a spread and puts REINFORCE near Hi-Lo ([§5.8](docs/paper.md)).
 
 | Condition | Avg reward |
 |---|---:|
@@ -39,6 +39,7 @@ python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
 python3 scripts/run_penetration_sweep.py --smoke
 python3 scripts/run_pg_spread_bakeoff.py --smoke
+python3 scripts/run_pg_spread_bakeoff.py --bet-focus --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
