@@ -196,6 +196,15 @@ def summarize_variable_betting_runs(
     ]
     if rows and all(key in rows[0] for key in ("spread_risk_of_ruin", "flat_risk_of_ruin")):
         keys.extend(optional_bankroll_keys)
+    optional_pg_keys = [
+        "pg_average_reward",
+        "pg_ev_per_unit_wagered",
+        "pg_average_stake",
+        "delta_pg_minus_flat",
+        "delta_pg_minus_spread",
+    ]
+    if rows and all(key in rows[0] for key in optional_pg_keys):
+        keys.extend(optional_pg_keys)
     metrics = _stats_for_keys(rows, keys)
     return {
         "seeds": list(seeds),

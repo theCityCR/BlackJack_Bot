@@ -170,6 +170,15 @@ def test_run_comparison_with_pg_agent():
     assert "average_reward" in summary["pg_policy"]
     assert "delta_pg_minus_flat" in summary
     assert "delta_pg_minus_spread" in summary
+    row = vb_eval.compact_run_row(summary)
+    assert row["pg_agent"] == "reinforce"
+    assert "pg_average_reward" in row
+    assert "delta_pg_minus_spread" in row
+    from agents.cli_seeds import summarize_variable_betting_runs
+
+    stats = summarize_variable_betting_runs([row], [2])
+    assert "pg_average_reward" in stats
+    assert stats["pg_average_reward"]["n"] == 1
 
 
 def test_main_rejects_pg_agent_without_checkpoint(monkeypatch):

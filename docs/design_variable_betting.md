@@ -60,12 +60,16 @@ Two-level demo (shipped):
 1. **Bet:** Hi-Lo true count from `count_vector` → `TrueCountBetSchedule` (TC≤0→1, 1→2, 2→4, 3→6, ≥4→8).
 2. **Play:** verified rule chart (`RuleAgent`).
 
-End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinforce.py`, `a2c.py`, `ppo.py` with shared `agents/policy_base.py`. Discrete stakes `{1..BET_MAX}` then masked play actions. Warm-start clones SpreadRule via CE (`agents/pg_warmstart.py`).
+End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinforce.py`, `a2c.py`, `ppo.py` with shared `agents/policy_base.py`. Discrete stakes `{1..BET_MAX}` then masked play actions. Warm-start clones SpreadRule via CE (`agents/pg_warmstart.py`). Published bake-off vs rule+Hi-Lo (§5.7): [`docs/results/pg_spread_bakeoff_results.json`](results/pg_spread_bakeoff_results.json).
 
 ```bash
 python3 -m agents.train_a2c --episodes 1000 --seed 42 --no-warmstart
 python3 scripts/run_variable_betting_eval.py --smoke \
   --pg-agent a2c --pg-checkpoint agents/results/a2c/a2c_bet_play_model.pt
+python3 scripts/run_pg_spread_bakeoff.py --smoke
+# Published §5.7 protocol (after full 200k trains):
+python3 scripts/run_pg_spread_bakeoff.py --episodes 100000 --seeds 42,43,44 \
+  --output docs/results/pg_spread_bakeoff_results.json
 ```
 
 ## Rules / bankroll notes
@@ -78,4 +82,4 @@ python3 scripts/run_variable_betting_eval.py --smoke \
 ## Non-goals
 
 - No change to published flat-bet ablation or gap-close tables under `docs/results/`.
-- PG checkpoints live under `agents/results/<reinforce|a2c|ppo>/` until deliberately published.
+- PG checkpoints live under `agents/results/<reinforce|a2c|ppo>/` (gitignored); the §5.7 aggregate JSON is the published claim.

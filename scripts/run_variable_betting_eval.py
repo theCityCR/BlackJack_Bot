@@ -288,6 +288,16 @@ def compact_run_row(summary: dict[str, Any]) -> dict[str, Any]:
         row["spread_path_ruined"] = path["ruined"]
         row["flat_risk_of_ruin"] = flat_trips["risk_of_ruin"]
         row["flat_mean_ending_bankroll"] = flat_trips["mean_ending_bankroll"]
+    if "pg_policy" in summary:
+        pg = summary["pg_policy"]
+        row["pg_agent"] = summary.get("pg_agent")
+        row["pg_average_reward"] = pg["average_reward"]
+        row["pg_ev_per_unit_wagered"] = pg["ev_per_unit_wagered"]
+        row["pg_average_stake"] = pg["average_stake"]
+        row["delta_pg_minus_flat"] = summary["delta_pg_minus_flat"]
+        row["delta_pg_minus_spread"] = summary["delta_pg_minus_spread"]
+        row["pg_bet_fraction"] = pg["bet_fraction"]
+        row["pg_true_count_fraction"] = pg["true_count_fraction"]
     return row
 
 
@@ -511,6 +521,14 @@ def main() -> None:
             "does not modify flat-bet ablation/gap-close tables."
         ),
     }
+    if args.pg_agent is not None:
+        payload["pg_agent"] = args.pg_agent
+        payload["pg_checkpoint"] = str(args.pg_checkpoint)
+        payload["artifact_note"] = (
+            f"Multi-seed PG bake-off ({args.pg_agent}) vs flat/spread rule. "
+            "Copy to docs/results/ only when publishing; "
+            "does not modify flat-bet ablation/gap-close tables."
+        )
     if starting_bankroll is not None:
         payload["starting_bankroll"] = float(starting_bankroll)
         payload["trip_rounds"] = (
@@ -527,6 +545,15 @@ def main() -> None:
         f"spread {s['spread_average_reward']['mean']:+.4f}±{s['spread_average_reward']['std']:.4f}, "
         f"delta {s['delta_average_reward']['mean']:+.4f}±{s['delta_average_reward']['std']:.4f}"
     )
+    if "pg_average_reward" in s:
+        print(
+            "PG mean ± std EV/round — "
+            f"{s['pg_average_reward']['mean']:+.4f}±{s['pg_average_reward']['std']:.4f}, "
+            f"Δ vs flat {s['delta_pg_minus_flat']['mean']:+.4f}±"
+            f"{s['delta_pg_minus_flat']['std']:.4f}, "
+            f"Δ vs spread {s['delta_pg_minus_spread']['mean']:+.4f}±"
+            f"{s['delta_pg_minus_spread']['std']:.4f}"
+        )
     if "spread_risk_of_ruin" in s:
         print(
             "Mean ± std trip RoR — "

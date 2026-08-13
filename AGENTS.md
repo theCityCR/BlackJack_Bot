@@ -27,6 +27,7 @@ Storefront: [README.md](README.md).
 | `scripts/run_ablation_double_dqn.py` | Ablation conditions A–D |
 | `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds`; optional `--pg-agent`) |
 | `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration (§5.6) |
+| `scripts/run_pg_spread_bakeoff.py` | PG vs flat/spread rule bake-off (§5.7) |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 
@@ -48,6 +49,7 @@ python3 scripts/run_variable_betting_eval.py --smoke --bankroll
 python3 scripts/run_variable_betting_eval.py --smoke \
   --pg-agent a2c --pg-checkpoint agents/results/a2c/a2c_bet_play_model.pt
 python3 scripts/run_penetration_sweep.py --smoke
+python3 scripts/run_pg_spread_bakeoff.py --smoke
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 ## Conventions for agents
