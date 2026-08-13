@@ -28,8 +28,8 @@ Storefront: [README.md](README.md).
 | `scripts/run_variable_betting_eval.py` | Paired flat vs Hi-Lo spread + rule (`--seeds`; optional `--pg-agent`) |
 | `scripts/run_penetration_sweep.py` | Spread EV vs reshuffle cut / dealt penetration (§5.6) |
 | `scripts/run_pg_bet_focus_train.py` | Parallel detached `--bet-focus` PG trains (§5.8) |
-| `scripts/run_pg_unfreeze_train.py` | Parallel detached `--unfreeze` phase-2 (thaw play after bet-focus) |
-| `scripts/run_pg_spread_bakeoff.py` | PG vs flat/spread rule bake-off (§5.7; `--bet-focus` → §5.8; `--unfreeze`) |
+| `scripts/run_pg_unfreeze_train.py` | Parallel detached `--unfreeze` phase-2 (thaw play after bet-focus; §5.9) |
+| `scripts/run_pg_spread_bakeoff.py` | PG vs flat/spread rule bake-off (§5.7; `--bet-focus` → §5.8; `--unfreeze` → §5.9) |
 | `evaluate_agents.py` | Seeded eval of available checkpoints |
 | `docs/results/` | **Published** benchmarks — do not overwrite casually |
 

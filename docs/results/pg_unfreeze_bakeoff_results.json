@@ -1,0 +1,692 @@
+{
+  "smoke": false,
+  "train_seed": 42,
+  "train_episodes": 200000,
+  "bet_focus": false,
+  "unfreeze": true,
+  "checkpoint_subdir": "unfreeze",
+  "warmstart": true,
+  "eval_episodes": 100000,
+  "eval_seeds": [
+    42,
+    43,
+    44
+  ],
+  "rounds_per_shoe": 100,
+  "paired_eval": true,
+  "agents": [
+    {
+      "pg_agent": "reinforce",
+      "pg_checkpoint": "/Users/raymond/BlackJack_Bot/agents/results/reinforce/unfreeze/reinforce_bet_play_model.pt",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "paired_eval": true,
+      "runs": [
+        {
+          "seed": 42,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00501,
+          "spread_average_reward": 0.036615,
+          "spread_ev_per_unit_wagered": 0.015637345131987477,
+          "spread_average_stake": 2.34151,
+          "delta_average_reward": 0.031605,
+          "spread_bet_fraction": {
+            "1": 0.67111,
+            "2": 0.1008,
+            "4": 0.06508,
+            "6": 0.0478,
+            "8": 0.11521
+          },
+          "true_count_fraction": {
+            "<=0": 0.67111,
+            "1": 0.1008,
+            "2": 0.06508,
+            "3": 0.0478,
+            ">=4": 0.11521
+          },
+          "pg_agent": "reinforce",
+          "pg_average_reward": -0.097315,
+          "pg_ev_per_unit_wagered": -0.03077738068882634,
+          "pg_average_stake": 3.1619,
+          "delta_pg_minus_flat": -0.102325,
+          "delta_pg_minus_spread": -0.13393,
+          "pg_bet_fraction": {
+            "1": 0.6627,
+            "2": 0.0332,
+            "8": 0.3041
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.67126,
+            "1": 0.10023,
+            "2": 0.06534,
+            "3": 0.04778,
+            ">=4": 0.11539
+          }
+        },
+        {
+          "seed": 43,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00135,
+          "spread_average_reward": 0.02787,
+          "spread_ev_per_unit_wagered": 0.011884912089177352,
+          "spread_average_stake": 2.34499,
+          "delta_average_reward": 0.02652,
+          "spread_bet_fraction": {
+            "1": 0.66933,
+            "2": 0.10305,
+            "4": 0.06433,
+            "6": 0.04704,
+            "8": 0.11625
+          },
+          "true_count_fraction": {
+            "<=0": 0.66933,
+            "1": 0.10305,
+            "2": 0.06433,
+            "3": 0.04704,
+            ">=4": 0.11625
+          },
+          "pg_agent": "reinforce",
+          "pg_average_reward": -0.10209,
+          "pg_ev_per_unit_wagered": -0.032298274198396,
+          "pg_average_stake": 3.16085,
+          "delta_pg_minus_flat": -0.10344,
+          "delta_pg_minus_spread": -0.12996,
+          "pg_bet_fraction": {
+            "1": 0.66309,
+            "2": 0.03292,
+            "8": 0.30399
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.66928,
+            "1": 0.10307,
+            "2": 0.06392,
+            "3": 0.04758,
+            ">=4": 0.11615
+          }
+        },
+        {
+          "seed": 44,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": -0.00809,
+          "spread_average_reward": 0.015265,
+          "spread_ev_per_unit_wagered": 0.006494473422223735,
+          "spread_average_stake": 2.35046,
+          "delta_average_reward": 0.023355,
+          "spread_bet_fraction": {
+            "1": 0.66868,
+            "2": 0.10337,
+            "4": 0.0635,
+            "6": 0.04728,
+            "8": 0.11717
+          },
+          "true_count_fraction": {
+            "<=0": 0.66868,
+            "1": 0.10337,
+            "2": 0.0635,
+            "3": 0.04728,
+            ">=4": 0.11717
+          },
+          "pg_agent": "reinforce",
+          "pg_average_reward": -0.116595,
+          "pg_ev_per_unit_wagered": -0.036837931426693796,
+          "pg_average_stake": 3.16508,
+          "delta_pg_minus_flat": -0.108505,
+          "delta_pg_minus_spread": -0.13186,
+          "pg_bet_fraction": {
+            "1": 0.66162,
+            "2": 0.03393,
+            "8": 0.30445
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.6694,
+            "1": 0.10239,
+            "2": 0.06341,
+            "3": 0.04736,
+            ">=4": 0.11744
+          }
+        }
+      ],
+      "summary": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "n_seeds": 3,
+        "flat_average_reward": {
+          "mean": -0.000577,
+          "std": 0.006759,
+          "n": 3,
+          "min": -0.00809,
+          "max": 0.00501
+        },
+        "spread_average_reward": {
+          "mean": 0.026583,
+          "std": 0.010733,
+          "n": 3,
+          "min": 0.015265,
+          "max": 0.036615
+        },
+        "spread_ev_per_unit_wagered": {
+          "mean": 0.011339,
+          "std": 0.004596,
+          "n": 3,
+          "min": 0.006494,
+          "max": 0.015637
+        },
+        "spread_average_stake": {
+          "mean": 2.345653,
+          "std": 0.004512,
+          "n": 3,
+          "min": 2.34151,
+          "max": 2.35046
+        },
+        "delta_average_reward": {
+          "mean": 0.02716,
+          "std": 0.004162,
+          "n": 3,
+          "min": 0.023355,
+          "max": 0.031605
+        },
+        "pg_average_reward": {
+          "mean": -0.105333,
+          "std": 0.010041,
+          "n": 3,
+          "min": -0.116595,
+          "max": -0.097315
+        },
+        "pg_ev_per_unit_wagered": {
+          "mean": -0.033305,
+          "std": 0.003153,
+          "n": 3,
+          "min": -0.036838,
+          "max": -0.030777
+        },
+        "pg_average_stake": {
+          "mean": 3.16261,
+          "std": 0.002203,
+          "n": 3,
+          "min": 3.16085,
+          "max": 3.16508
+        },
+        "delta_pg_minus_flat": {
+          "mean": -0.104757,
+          "std": 0.003294,
+          "n": 3,
+          "min": -0.108505,
+          "max": -0.102325
+        },
+        "delta_pg_minus_spread": {
+          "mean": -0.131917,
+          "std": 0.001986,
+          "n": 3,
+          "min": -0.13393,
+          "max": -0.12996
+        }
+      }
+    },
+    {
+      "pg_agent": "a2c",
+      "pg_checkpoint": "/Users/raymond/BlackJack_Bot/agents/results/a2c/unfreeze/a2c_bet_play_model.pt",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "paired_eval": true,
+      "runs": [
+        {
+          "seed": 42,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00501,
+          "spread_average_reward": 0.036615,
+          "spread_ev_per_unit_wagered": 0.015637345131987477,
+          "spread_average_stake": 2.34151,
+          "delta_average_reward": 0.031605,
+          "spread_bet_fraction": {
+            "1": 0.67111,
+            "2": 0.1008,
+            "4": 0.06508,
+            "6": 0.0478,
+            "8": 0.11521
+          },
+          "true_count_fraction": {
+            "<=0": 0.67111,
+            "1": 0.1008,
+            "2": 0.06508,
+            "3": 0.0478,
+            ">=4": 0.11521
+          },
+          "pg_agent": "a2c",
+          "pg_average_reward": -0.03324,
+          "pg_ev_per_unit_wagered": -0.027743927885819215,
+          "pg_average_stake": 1.1981,
+          "delta_pg_minus_flat": -0.03825,
+          "delta_pg_minus_spread": -0.069855,
+          "pg_bet_fraction": {
+            "1": 0.80478,
+            "2": 0.19474,
+            "8": 0.00048
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.67139,
+            "1": 0.09946,
+            "2": 0.06459,
+            "3": 0.04751,
+            ">=4": 0.11705
+          }
+        },
+        {
+          "seed": 43,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00135,
+          "spread_average_reward": 0.02787,
+          "spread_ev_per_unit_wagered": 0.011884912089177352,
+          "spread_average_stake": 2.34499,
+          "delta_average_reward": 0.02652,
+          "spread_bet_fraction": {
+            "1": 0.66933,
+            "2": 0.10305,
+            "4": 0.06433,
+            "6": 0.04704,
+            "8": 0.11625
+          },
+          "true_count_fraction": {
+            "<=0": 0.66933,
+            "1": 0.10305,
+            "2": 0.06433,
+            "3": 0.04704,
+            ">=4": 0.11625
+          },
+          "pg_agent": "a2c",
+          "pg_average_reward": -0.03341,
+          "pg_ev_per_unit_wagered": -0.027883957335291858,
+          "pg_average_stake": 1.19818,
+          "delta_pg_minus_flat": -0.03476,
+          "delta_pg_minus_spread": -0.06128,
+          "pg_bet_fraction": {
+            "1": 0.80572,
+            "2": 0.19363,
+            "8": 0.00065
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.66969,
+            "1": 0.10171,
+            "2": 0.06325,
+            "3": 0.04723,
+            ">=4": 0.11812
+          }
+        },
+        {
+          "seed": 44,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": -0.00809,
+          "spread_average_reward": 0.015265,
+          "spread_ev_per_unit_wagered": 0.006494473422223735,
+          "spread_average_stake": 2.35046,
+          "delta_average_reward": 0.023355,
+          "spread_bet_fraction": {
+            "1": 0.66868,
+            "2": 0.10337,
+            "4": 0.0635,
+            "6": 0.04728,
+            "8": 0.11717
+          },
+          "true_count_fraction": {
+            "<=0": 0.66868,
+            "1": 0.10337,
+            "2": 0.0635,
+            "3": 0.04728,
+            ">=4": 0.11717
+          },
+          "pg_agent": "a2c",
+          "pg_average_reward": -0.04696,
+          "pg_ev_per_unit_wagered": -0.039155847945902225,
+          "pg_average_stake": 1.19931,
+          "delta_pg_minus_flat": -0.03887,
+          "delta_pg_minus_spread": -0.062225,
+          "pg_bet_fraction": {
+            "1": 0.80375,
+            "2": 0.19574,
+            "8": 0.00051
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.66995,
+            "1": 0.10159,
+            "2": 0.06271,
+            "3": 0.04682,
+            ">=4": 0.11893
+          }
+        }
+      ],
+      "summary": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "n_seeds": 3,
+        "flat_average_reward": {
+          "mean": -0.000577,
+          "std": 0.006759,
+          "n": 3,
+          "min": -0.00809,
+          "max": 0.00501
+        },
+        "spread_average_reward": {
+          "mean": 0.026583,
+          "std": 0.010733,
+          "n": 3,
+          "min": 0.015265,
+          "max": 0.036615
+        },
+        "spread_ev_per_unit_wagered": {
+          "mean": 0.011339,
+          "std": 0.004596,
+          "n": 3,
+          "min": 0.006494,
+          "max": 0.015637
+        },
+        "spread_average_stake": {
+          "mean": 2.345653,
+          "std": 0.004512,
+          "n": 3,
+          "min": 2.34151,
+          "max": 2.35046
+        },
+        "delta_average_reward": {
+          "mean": 0.02716,
+          "std": 0.004162,
+          "n": 3,
+          "min": 0.023355,
+          "max": 0.031605
+        },
+        "pg_average_reward": {
+          "mean": -0.03787,
+          "std": 0.007873,
+          "n": 3,
+          "min": -0.04696,
+          "max": -0.03324
+        },
+        "pg_ev_per_unit_wagered": {
+          "mean": -0.031595,
+          "std": 0.006549,
+          "n": 3,
+          "min": -0.039156,
+          "max": -0.027744
+        },
+        "pg_average_stake": {
+          "mean": 1.19853,
+          "std": 0.000677,
+          "n": 3,
+          "min": 1.1981,
+          "max": 1.19931
+        },
+        "delta_pg_minus_flat": {
+          "mean": -0.037293,
+          "std": 0.002216,
+          "n": 3,
+          "min": -0.03887,
+          "max": -0.03476
+        },
+        "delta_pg_minus_spread": {
+          "mean": -0.064453,
+          "std": 0.004702,
+          "n": 3,
+          "min": -0.069855,
+          "max": -0.06128
+        }
+      }
+    },
+    {
+      "pg_agent": "ppo",
+      "pg_checkpoint": "/Users/raymond/BlackJack_Bot/agents/results/ppo/unfreeze/ppo_bet_play_model.pt",
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "episodes": 100000,
+      "rounds_per_shoe": 100,
+      "paired_eval": true,
+      "runs": [
+        {
+          "seed": 42,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00501,
+          "spread_average_reward": 0.036615,
+          "spread_ev_per_unit_wagered": 0.015637345131987477,
+          "spread_average_stake": 2.34151,
+          "delta_average_reward": 0.031605,
+          "spread_bet_fraction": {
+            "1": 0.67111,
+            "2": 0.1008,
+            "4": 0.06508,
+            "6": 0.0478,
+            "8": 0.11521
+          },
+          "true_count_fraction": {
+            "<=0": 0.67111,
+            "1": 0.1008,
+            "2": 0.06508,
+            "3": 0.0478,
+            ">=4": 0.11521
+          },
+          "pg_agent": "ppo",
+          "pg_average_reward": -0.025635,
+          "pg_ev_per_unit_wagered": -0.01429822408638615,
+          "pg_average_stake": 1.79288,
+          "delta_pg_minus_flat": -0.030645000000000002,
+          "delta_pg_minus_spread": -0.06225,
+          "pg_bet_fraction": {
+            "1": 0.8745,
+            "2": 0.01427,
+            "8": 0.11123
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.67173,
+            "1": 0.10095,
+            "2": 0.06561,
+            "3": 0.04813,
+            ">=4": 0.11358
+          }
+        },
+        {
+          "seed": 43,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": 0.00135,
+          "spread_average_reward": 0.02787,
+          "spread_ev_per_unit_wagered": 0.011884912089177352,
+          "spread_average_stake": 2.34499,
+          "delta_average_reward": 0.02652,
+          "spread_bet_fraction": {
+            "1": 0.66933,
+            "2": 0.10305,
+            "4": 0.06433,
+            "6": 0.04704,
+            "8": 0.11625
+          },
+          "true_count_fraction": {
+            "<=0": 0.66933,
+            "1": 0.10305,
+            "2": 0.06433,
+            "3": 0.04704,
+            ">=4": 0.11625
+          },
+          "pg_agent": "ppo",
+          "pg_average_reward": -0.037415,
+          "pg_ev_per_unit_wagered": -0.020839483343451842,
+          "pg_average_stake": 1.79539,
+          "delta_pg_minus_flat": -0.038764999999999994,
+          "delta_pg_minus_spread": -0.065285,
+          "pg_bet_fraction": {
+            "1": 0.87499,
+            "2": 0.01328,
+            "8": 0.11173
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.66952,
+            "1": 0.10393,
+            "2": 0.06465,
+            "3": 0.04767,
+            ">=4": 0.11423
+          }
+        },
+        {
+          "seed": 44,
+          "episodes": 100000,
+          "rounds_per_shoe": 100,
+          "reshuffle_threshold": 26,
+          "dealt_penetration": 0.75,
+          "flat_average_reward": -0.00809,
+          "spread_average_reward": 0.015265,
+          "spread_ev_per_unit_wagered": 0.006494473422223735,
+          "spread_average_stake": 2.35046,
+          "delta_average_reward": 0.023355,
+          "spread_bet_fraction": {
+            "1": 0.66868,
+            "2": 0.10337,
+            "4": 0.0635,
+            "6": 0.04728,
+            "8": 0.11717
+          },
+          "true_count_fraction": {
+            "<=0": 0.66868,
+            "1": 0.10337,
+            "2": 0.0635,
+            "3": 0.04728,
+            ">=4": 0.11717
+          },
+          "pg_agent": "ppo",
+          "pg_average_reward": -0.04193,
+          "pg_ev_per_unit_wagered": -0.023314131933632846,
+          "pg_average_stake": 1.79848,
+          "delta_pg_minus_flat": -0.03384,
+          "delta_pg_minus_spread": -0.057195,
+          "pg_bet_fraction": {
+            "1": 0.87412,
+            "2": 0.01378,
+            "8": 0.1121
+          },
+          "pg_true_count_fraction": {
+            "<=0": 0.67012,
+            "1": 0.10301,
+            "2": 0.06405,
+            "3": 0.04692,
+            ">=4": 0.1159
+          }
+        }
+      ],
+      "summary": {
+        "seeds": [
+          42,
+          43,
+          44
+        ],
+        "n_seeds": 3,
+        "flat_average_reward": {
+          "mean": -0.000577,
+          "std": 0.006759,
+          "n": 3,
+          "min": -0.00809,
+          "max": 0.00501
+        },
+        "spread_average_reward": {
+          "mean": 0.026583,
+          "std": 0.010733,
+          "n": 3,
+          "min": 0.015265,
+          "max": 0.036615
+        },
+        "spread_ev_per_unit_wagered": {
+          "mean": 0.011339,
+          "std": 0.004596,
+          "n": 3,
+          "min": 0.006494,
+          "max": 0.015637
+        },
+        "spread_average_stake": {
+          "mean": 2.345653,
+          "std": 0.004512,
+          "n": 3,
+          "min": 2.34151,
+          "max": 2.35046
+        },
+        "delta_average_reward": {
+          "mean": 0.02716,
+          "std": 0.004162,
+          "n": 3,
+          "min": 0.023355,
+          "max": 0.031605
+        },
+        "pg_average_reward": {
+          "mean": -0.034993,
+          "std": 0.008413,
+          "n": 3,
+          "min": -0.04193,
+          "max": -0.025635
+        },
+        "pg_ev_per_unit_wagered": {
+          "mean": -0.019484,
+          "std": 0.004658,
+          "n": 3,
+          "min": -0.023314,
+          "max": -0.014298
+        },
+        "pg_average_stake": {
+          "mean": 1.795583,
+          "std": 0.002805,
+          "n": 3,
+          "min": 1.79288,
+          "max": 1.79848
+        },
+        "delta_pg_minus_flat": {
+          "mean": -0.034417,
+          "std": 0.004091,
+          "n": 3,
+          "min": -0.038765,
+          "max": -0.030645
+        },
+        "delta_pg_minus_spread": {
+          "mean": -0.061577,
+          "std": 0.004087,
+          "n": 3,
+          "min": -0.065285,
+          "max": -0.057195
+        }
+      }
+    }
+  ],
+  "artifact_note": "Unfreeze-after-bet-focus PG bake-off (200k thawed play / teacher CE). Does not replace published \u00a75.7 / \u00a75.8 bake-off JSONs."
+}

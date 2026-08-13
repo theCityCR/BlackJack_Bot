@@ -268,11 +268,34 @@ python3 scripts/run_pg_bet_focus_train.py --resume
 python3 scripts/run_pg_spread_bakeoff.py --bet-focus --episodes 100000 --seeds 42,43,44
 ```
 
+### 5.9 Unfreeze after bet-focus (thaw play)
+
+§5.8 recovered a counting spread by freezing rule-chart play. This follow-on asks whether **thawing the play head** from those checkpoints can improve further without destroying the stake policy. Protocol: load `agents/results/<agent>/bet_focus/` weights, set `freeze_play=False`, keep bet-head entropy and teacher bet CE, train **200,000** additional episodes (`--unfreeze`; artifacts under `…/unfreeze/`). Mid-run checkpoints every 25k episodes support pause/resume. Evaluation matches §5.5 / §5.7 / §5.8 (**100,000** rounds × seeds 42–44).
+
+| Policy | EV/round (mean ± std) | Avg stake | Δ vs spread |
+|---|---:|---:|---:|
+| Rule + Hi-Lo spread (§5.5) | **+0.0266 ± 0.0107** | 2.35 | — |
+| Flat rule | −0.0006 ± 0.0068 | 1.00 | — |
+| REINFORCE (bet-focus, §5.8) | **+0.0297 ± 0.0064** | 2.27 | **+0.0031 ± 0.0095** |
+| REINFORCE (unfreeze) | −0.1053 ± 0.0100 | 3.16 | −0.1319 ± 0.0020 |
+| A2C (unfreeze) | −0.0379 ± 0.0079 | 1.20 | −0.0645 ± 0.0047 |
+| PPO (unfreeze) | −0.0350 ± 0.0084 | 1.80 | −0.0616 ± 0.0041 |
+
+All three unfreeze policies are **negative** vs flat and trail Hi-Lo by a wide margin. Thawing play under this budget undoes the §5.8 stake-retention win: REINFORCE keeps a heavy `{1, 8}` mix but play quality collapses (EV/unit ≈ −0.03); A2C nearly abandons max stake; PPO sits in between. Relative to §5.8, **keeping play frozen** remains the safer product path until a stronger play warm-start or slower thaw is designed.
+
+Artifact: [`docs/results/pg_unfreeze_bakeoff_results.json`](results/pg_unfreeze_bakeoff_results.json).
+
+```bash
+python3 scripts/run_pg_unfreeze_train.py --seed 42
+python3 scripts/run_pg_unfreeze_train.py --resume
+python3 scripts/run_pg_spread_bakeoff.py --unfreeze --episodes 100000 --seeds 42,43,44
+```
+
 ## 6. Discussion
 
-Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215). On the product path, deeper dealt penetration (§5.6) monotonically increases rule+Hi-Lo spread EV and Δ vs flat on seed 42. The §5.7 bake-off shows that the same 200k budget is also insufficient for joint bet+play PG agents to retain a counting spread after warm-start—policies collapse to constant stakes and trail the scripted baseline. The §5.8 bet-focus protocol reverses that collapse: freezing rule play and retaining the teacher stake recovers positive EV and puts REINFORCE within noise of Hi-Lo on mean Δ, without beating it decisively.
+Legacy architecture comparisons (§5.1) and the equalized Double DQN ablations (§5.2) both support the hypothesis that **architecture depth is not a substitute for state and training design**. Exact shoe composition enlarges the effective state space; training on full counts from scratch (A) underperforms a hand-only policy (B) by a wide margin on the historical single-seed table. The multi-seed matrix (§5.4) keeps hand-only ahead on mean EV while showing that A is much more seed-sensitive than B–D. Curriculum and rule warm-start help relative to historical A, but under a 200k-episode budget they do not beat hand-only. The paired gap-close (§5.3 / §5.4) improves hand-only further yet remains short of the paired rule policy on every seed (mean gap −0.0215). On the product path, deeper dealt penetration (§5.6) monotonically increases rule+Hi-Lo spread EV and Δ vs flat on seed 42. The §5.7 bake-off shows that the same 200k budget is also insufficient for joint bet+play PG agents to retain a counting spread after warm-start—policies collapse to constant stakes and trail the scripted baseline. The §5.8 bet-focus protocol reverses that collapse: freezing rule play and retaining the teacher stake recovers positive EV and puts REINFORCE within noise of Hi-Lo on mean Δ, without beating it decisively. The §5.9 unfreeze attempt shows the complementary failure mode: thawing play from those checkpoints for another 200k episodes destroys EV again, so stake retention alone is not enough once the play head is free to drift.
 
-**Limitations.** Flat betting is the published study protocol (§5.1–§5.4); variable stake (§5.5), the penetration cut sweep (§5.6), and the PG bake-offs (§5.7–§5.8) are a separate product path (`docs/design_variable_betting.md`, `docs/results/multi_seed_variable_betting_results.json`, `docs/results/penetration_sweep_results.json`, `docs/results/pg_spread_bakeoff_results.json`, `docs/results/pg_bet_focus_bakeoff_results.json`). §5.6 is single-seed (42) at 100k rounds; §5.7 / §5.8 train once (seed 42) and evaluate on seeds 42–44. Bet-focus PG policies concentrate on stakes `{1, 8}` rather than the full Hi-Lo ladder. No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
+**Limitations.** Flat betting is the published study protocol (§5.1–§5.4); variable stake (§5.5), the penetration cut sweep (§5.6), and the PG bake-offs (§5.7–§5.9) are a separate product path (`docs/design_variable_betting.md`, `docs/results/multi_seed_variable_betting_results.json`, `docs/results/penetration_sweep_results.json`, `docs/results/pg_spread_bakeoff_results.json`, `docs/results/pg_bet_focus_bakeoff_results.json`, `docs/results/pg_unfreeze_bakeoff_results.json`). §5.6 is single-seed (42) at 100k rounds; §5.7–§5.9 train once (seed 42) and evaluate on seeds 42–44. Bet-focus PG policies concentrate on stakes `{1, 8}` rather than the full Hi-Lo ladder; unfreeze further distorts the stake mix. No insurance/surrender. §5.1 / §5.2 rule EV rows (−0.0103) remain the **historical** published baseline for those tables; the verified 2-deck S17 DAS chart measures −0.0034 under paired 25k eval (seed 42). Historical §5.2 / §5.3 tables stay single-seed (42); multi-seed mean±std for ablation and gap-close are in §5.4. The multi-seed ablation re-run uses the tightened rule chart for warm-start clones; the published single-seed §5.2 D row still reflects the pre-tighten chart.
 
 **Design history.** The environment went through roughly four major redesigns (splits/doubles → multi-hand rewards → count features → persistent multi-deck shoe). That evolution is part of the experimental story: realism expands the state space faster than naive DQN capacity.
 
@@ -296,7 +319,7 @@ Evaluate checkpoints:
 python3 evaluate_agents.py --episodes 25000 --seed 42
 ```
 
-Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): §5.5 / [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py --seeds 42,43,44`. Penetration cut sweep: §5.6 / `scripts/run_penetration_sweep.py`. PG vs spread bake-off: §5.7 / `scripts/run_pg_spread_bakeoff.py`. Bet-focus PG follow-on: §5.8 / `scripts/run_pg_bet_focus_train.py` / `scripts/run_pg_spread_bakeoff.py --bet-focus`.
+Ablations and curves: see §5.2 and `scripts/`. Hand-only gap-close: §5.3 / `scripts/run_hand_only_gap_close.py`. Multi-seed matrix: §5.4 (`--seeds 42,43,44`, optional `--resume`). Variable betting (rule + Hi-Lo spread): §5.5 / [`docs/design_variable_betting.md`](design_variable_betting.md) / `scripts/run_variable_betting_eval.py --seeds 42,43,44`. Penetration cut sweep: §5.6 / `scripts/run_penetration_sweep.py`. PG vs spread bake-off: §5.7 / `scripts/run_pg_spread_bakeoff.py`. Bet-focus PG follow-on: §5.8 / `scripts/run_pg_bet_focus_train.py` / `scripts/run_pg_spread_bakeoff.py --bet-focus`. Unfreeze after bet-focus: §5.9 / `scripts/run_pg_unfreeze_train.py` / `scripts/run_pg_spread_bakeoff.py --unfreeze`.
 
 ## License
 
