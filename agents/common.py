@@ -527,13 +527,19 @@ def load_policy_checkpoint(
     device: str | None = "cpu",
     **agent_kwargs: Any,
 ) -> tuple[Any, dict[str, Any]]:
-    """Rebuild a bet+play PG agent from :func:`save_policy_checkpoint`."""
+    """Rebuild a bet+play PG agent from :func:`save_policy_checkpoint`.
+
+    Explicit ``agent_kwargs`` (especially ``freeze_play``) win over values
+    stored in the checkpoint so an unfreeze train can load bet-focus weights
+    while thawing the play head.
+    """
     checkpoint_path = Path(path)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
     kwargs: dict[str, Any] = dict(agent_kwargs)
     if device is not None:
         kwargs["device"] = device
+    explicit_freeze = "freeze_play" in kwargs
     # Restore stake-only / rule-play mode so eval matches training.
     for key in (
         "freeze_play",
@@ -551,7 +557,13 @@ def load_policy_checkpoint(
         agent = agent_class(**kwargs)
 
     agent.model.load_state_dict(checkpoint["model_state_dict"])
-    if "optimizer_state_dict" in checkpoint and hasattr(agent, "optimizer"):
+    ckpt_freeze = bool(checkpoint.get("freeze_play", agent.freeze_play))
+    freeze_changed = explicit_freeze and bool(kwargs.get("freeze_play")) != ckpt_freeze
+    if (
+        not freeze_changed
+        and "optimizer_state_dict" in checkpoint
+        and hasattr(agent, "optimizer")
+    ):
         try:
             agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         except (ValueError, KeyError):
@@ -563,7 +575,7 @@ def load_policy_checkpoint(
         agent._baseline_initialized = bool(
             checkpoint.get("baseline_initialized", True)
         )
-    if "use_rule_play" in checkpoint:
+    if not explicit_freeze and "use_rule_play" in checkpoint:
         agent.use_rule_play = bool(checkpoint["use_rule_play"])
         if agent.use_rule_play and getattr(agent, "_rule_play", None) is None:
             from agents.rule import RuleAgent

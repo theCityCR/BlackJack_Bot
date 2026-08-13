@@ -5,6 +5,8 @@ Separate from the flat-bet DQN protocol so published study knobs stay untouched.
 §5.7 bake-off used 200k episodes / 5k warm-start / shared entropy 0.01 with
 joint bet+play learning. The ``--bet-focus`` CLI preset layers longer budget,
 stronger SpreadRule retention, higher bet-head entropy, and frozen rule play.
+``--unfreeze`` is the phase-2 preset: load bet_focus weights, thaw play, keep
+teacher bet CE, mid-run checkpoints for pause/resume.
 """
 
 # Episode budget aligned with the neural study default wall-clock scale.
@@ -40,6 +42,20 @@ PG_BET_FOCUS_PRINT_INTERVAL = 50_000
 PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES = 100
 PG_BET_FOCUS_FINAL_EVAL_EPISODES = 2_000
 PG_BET_FOCUS_ARTIFACT_SUBDIR = "bet_focus"
+
+# Unfreeze-after-bet-focus: thaw play head from a bet_focus checkpoint while
+# retaining teacher stake CE. Mid-run checkpoints + --resume survive shutdown.
+PG_UNFREEZE_TRAINING_EPISODES = 200_000
+PG_UNFREEZE_WARMSTART_EPISODES = 0
+PG_UNFREEZE_BET_ENTROPY_COEF = 0.05
+PG_UNFREEZE_PLAY_ENTROPY_COEF = 0.01
+PG_UNFREEZE_TEACHER_BET_CE_COEF = 0.1
+PG_UNFREEZE_FREEZE_PLAY = False
+PG_UNFREEZE_PRINT_INTERVAL = 25_000
+PG_UNFREEZE_CHECKPOINT_EVAL_EPISODES = 100
+PG_UNFREEZE_FINAL_EVAL_EPISODES = 2_000
+PG_UNFREEZE_ARTIFACT_SUBDIR = "unfreeze"
+PG_UNFREEZE_INIT_SUBDIR = "bet_focus"
 
 # Behavior cloning from SpreadRuleAgent before RL.
 PG_WARMSTART_ENABLED = True

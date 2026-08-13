@@ -103,12 +103,21 @@ def main() -> None:
         help="Shorthand for --checkpoint-subdir bet_focus and train-episodes 500000.",
     )
     parser.add_argument(
+        "--unfreeze",
+        action="store_true",
+        help=(
+            "Shorthand for --checkpoint-subdir unfreeze and train-episodes 200000 "
+            "(phase-2 after bet-focus)."
+        ),
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=None,
         help=(
             f"Combined JSON path (default {DEFAULT_OUTPUT}; "
-            "docs/results/pg_bet_focus_bakeoff_results.json with --bet-focus)."
+            "docs/results/pg_bet_focus_bakeoff_results.json with --bet-focus; "
+            "docs/results/pg_unfreeze_bakeoff_results.json with --unfreeze)."
         ),
     )
     parser.add_argument(
@@ -118,16 +127,23 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.bet_focus and args.unfreeze:
+        parser.error("--bet-focus and --unfreeze are mutually exclusive")
     if args.bet_focus and args.checkpoint_subdir is None:
         args.checkpoint_subdir = "bet_focus"
+    if args.unfreeze and args.checkpoint_subdir is None:
+        args.checkpoint_subdir = "unfreeze"
     if args.bet_focus and args.train_episodes == 200_000:
         args.train_episodes = 500_000
+    if args.unfreeze and args.train_episodes == 200_000:
+        args.train_episodes = 200_000
     if args.output is None:
-        args.output = (
-            Path("docs/results/pg_bet_focus_bakeoff_results.json")
-            if args.bet_focus
-            else DEFAULT_OUTPUT
-        )
+        if args.bet_focus:
+            args.output = Path("docs/results/pg_bet_focus_bakeoff_results.json")
+        elif args.unfreeze:
+            args.output = Path("docs/results/pg_unfreeze_bakeoff_results.json")
+        else:
+            args.output = DEFAULT_OUTPUT
 
     try:
         seeds = (
@@ -164,11 +180,30 @@ def main() -> None:
             )
         )
 
+    if args.bet_focus or args.checkpoint_subdir == "bet_focus":
+        artifact_note = (
+            "Bet-focus PG vs rule+Hi-Lo bake-off (500k freeze-play / teacher CE). "
+            "Does not replace published §5.7 "
+            "docs/results/pg_spread_bakeoff_results.json."
+        )
+    elif args.unfreeze or args.checkpoint_subdir == "unfreeze":
+        artifact_note = (
+            "Unfreeze-after-bet-focus PG bake-off (200k thawed play / teacher CE). "
+            "Does not replace published §5.7 / §5.8 bake-off JSONs."
+        )
+    else:
+        artifact_note = (
+            "Published §5.7 PG vs rule+Hi-Lo bake-off. "
+            "Checkpoints under agents/results/<agent>/ remain gitignored; "
+            "does not modify flat-bet or §5.5 multi-seed tables."
+        )
+
     payload: dict[str, Any] = {
         "smoke": bool(args.smoke),
         "train_seed": args.train_seed,
         "train_episodes": args.train_episodes,
         "bet_focus": bool(args.bet_focus or args.checkpoint_subdir == "bet_focus"),
+        "unfreeze": bool(args.unfreeze or args.checkpoint_subdir == "unfreeze"),
         "checkpoint_subdir": args.checkpoint_subdir,
         "warmstart": True,
         "eval_episodes": episodes,
@@ -176,17 +211,7 @@ def main() -> None:
         "rounds_per_shoe": args.rounds_per_shoe,
         "paired_eval": True,
         "agents": agent_blocks,
-        "artifact_note": (
-            "Bet-focus PG vs rule+Hi-Lo bake-off (500k freeze-play / teacher CE). "
-            "Does not replace published §5.7 "
-            "docs/results/pg_spread_bakeoff_results.json."
-            if (args.bet_focus or args.checkpoint_subdir == "bet_focus")
-            else (
-                "Published §5.7 PG vs rule+Hi-Lo bake-off. "
-                "Checkpoints under agents/results/<agent>/ remain gitignored; "
-                "does not modify flat-bet or §5.5 multi-seed tables."
-            )
-        ),
+        "artifact_note": artifact_note,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2) + "\n")

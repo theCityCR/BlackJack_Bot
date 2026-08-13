@@ -64,14 +64,20 @@ End-to-end RL for bet+play (shipped): REINFORCE / A2C / PPO under `agents/reinfo
 
 **Bet-focus training** (post–§5.7 stake-collapse follow-on; published [§5.8](paper.md)): `--bet-focus` enables frozen rule play, higher bet-head entropy, soft CE retention toward the Hi-Lo teacher, 20k warm-start, and a 500k episode budget. Artifacts go under `agents/results/<agent>/bet_focus/`. Lean mid/final probes (bake-off does the heavy eval). Mid-run checkpoints save at each probe; continue with `--resume`. Parallel launch (detached by default so Cursor shell abort does not kill children): `python3 scripts/run_pg_bet_focus_train.py` / `--resume`. Paired bake-off: [`docs/results/pg_bet_focus_bakeoff_results.json`](results/pg_bet_focus_bakeoff_results.json).
 
+**Unfreeze after bet-focus** (phase-2): `--unfreeze` loads `bet_focus/` weights, thaws the play head, keeps teacher bet CE / bet entropy, and trains 200k episodes into `agents/results/<agent>/unfreeze/`. Checkpoints every 25k episodes; SIGINT/SIGTERM finish the current episode and save. Detached launch: `python3 scripts/run_pg_unfreeze_train.py` / `--resume` (re-running without `--resume` also continues if an unfreeze checkpoint already exists). Bake-off: `python3 scripts/run_pg_spread_bakeoff.py --unfreeze`.
+
 ```bash
 python3 -m agents.train_a2c --episodes 1000 --seed 42 --no-warmstart
 python3 -m agents.train_a2c --bet-focus --seed 42
 python3 scripts/run_pg_bet_focus_train.py
+python3 -m agents.train_a2c --unfreeze --seed 42
+python3 scripts/run_pg_unfreeze_train.py
+python3 scripts/run_pg_unfreeze_train.py --resume
 python3 scripts/run_variable_betting_eval.py --smoke \
   --pg-agent a2c --pg-checkpoint agents/results/a2c/bet_focus/a2c_bet_play_model.pt
 python3 scripts/run_pg_spread_bakeoff.py --smoke
-python3 scripts/run_pg_spread_bakeoff.py --bet-focus --episodes 100000 --seeds 42,43,44
+python3 scripts/run_pg_spread_bakeoff.py --bet-focus --smoke
+python3 scripts/run_pg_spread_bakeoff.py --unfreeze --smoke
 # Published §5.7 protocol (after full 200k trains):
 python3 scripts/run_pg_spread_bakeoff.py --episodes 100000 --seeds 42,43,44 \
   --output docs/results/pg_spread_bakeoff_results.json

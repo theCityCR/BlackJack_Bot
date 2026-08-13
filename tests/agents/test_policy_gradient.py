@@ -182,6 +182,50 @@ def test_bet_focus_cli_defaults():
     )
 
 
+def test_unfreeze_cli_defaults():
+    from agents.train_pg_cli import build_pg_arg_parser, resolve_pg_train_settings
+    from config import (
+        PG_UNFREEZE_ARTIFACT_SUBDIR,
+        PG_UNFREEZE_BET_ENTROPY_COEF,
+        PG_UNFREEZE_PLAY_ENTROPY_COEF,
+        PG_UNFREEZE_TEACHER_BET_CE_COEF,
+        PG_UNFREEZE_TRAINING_EPISODES,
+        PG_UNFREEZE_WARMSTART_EPISODES,
+    )
+
+    parser = build_pg_arg_parser("test")
+    args = parser.parse_args(["--unfreeze"])
+    settings = resolve_pg_train_settings(args)
+    assert settings["unfreeze"] is True
+    assert settings["episodes"] == PG_UNFREEZE_TRAINING_EPISODES
+    assert settings["warmstart_episodes"] == PG_UNFREEZE_WARMSTART_EPISODES
+    assert settings["artifact_subdir"] == PG_UNFREEZE_ARTIFACT_SUBDIR
+    assert settings["agent_kwargs"]["freeze_play"] is False
+    assert (
+        settings["agent_kwargs"]["bet_entropy_coef"] == PG_UNFREEZE_BET_ENTROPY_COEF
+    )
+    assert (
+        settings["agent_kwargs"]["play_entropy_coef"]
+        == PG_UNFREEZE_PLAY_ENTROPY_COEF
+    )
+    assert (
+        settings["agent_kwargs"]["teacher_bet_ce_coef"]
+        == PG_UNFREEZE_TEACHER_BET_CE_COEF
+    )
+
+
+def test_bet_focus_and_unfreeze_mutually_exclusive():
+    from agents.train_pg_cli import build_pg_arg_parser, resolve_pg_train_settings
+
+    parser = build_pg_arg_parser("test")
+    args = parser.parse_args(["--bet-focus", "--unfreeze"])
+    try:
+        resolve_pg_train_settings(args)
+        raise AssertionError("expected ValueError")
+    except ValueError as exc:
+        assert "mutually exclusive" in str(exc)
+
+
 def test_warmstart_batches_optimizer_steps():
     agent = A2CAgent(freeze_play=True)
     before = agent.training_steps
@@ -249,3 +293,30 @@ def test_freeze_play_checkpoint_restores_rule_play(tmp_path: Path):
     assert loaded.freeze_play is True
     assert loaded.use_rule_play is True
     assert loaded.teacher_bet_ce_coef == 0.05
+
+
+def test_unfreeze_load_thaws_play_from_freeze_checkpoint(tmp_path: Path):
+    frozen = A2CAgent(freeze_play=True, teacher_bet_ce_coef=0.1)
+    frozen.train_one_episode(BlackjackGame())
+    path = tmp_path / "a2c_freeze.pt"
+    save_policy_checkpoint(
+        frozen,
+        path,
+        extra={
+            "freeze_play": True,
+            "use_rule_play": True,
+            "teacher_bet_ce_coef": 0.1,
+        },
+    )
+    thawed, _payload = load_policy_checkpoint(
+        A2CAgent,
+        path,
+        freeze_play=False,
+        teacher_bet_ce_coef=0.1,
+        play_entropy_coef=0.01,
+    )
+    assert thawed.freeze_play is False
+    assert thawed.use_rule_play is False
+    assert any(p.requires_grad for p in thawed.model.play_policy.parameters())
+    traj = thawed.collect_trajectory(BlackjackGame())
+    assert traj.play  # neural play steps when thawed
