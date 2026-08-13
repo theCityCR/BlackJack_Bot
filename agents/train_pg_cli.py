@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
+import torch
+
 from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_args
 from agents.common import (
     agent_results_path,
@@ -19,9 +21,13 @@ from agents.learning_curves import LearningCurveLogger
 from agents.pg_warmstart import warmstart_from_spread_rule
 from config import (
     PG_BET_ENTROPY_COEF,
+    PG_BET_FOCUS_ARTIFACT_SUBDIR,
     PG_BET_FOCUS_BET_ENTROPY_COEF,
+    PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES,
+    PG_BET_FOCUS_FINAL_EVAL_EPISODES,
     PG_BET_FOCUS_FREEZE_PLAY,
     PG_BET_FOCUS_PLAY_ENTROPY_COEF,
+    PG_BET_FOCUS_PRINT_INTERVAL,
     PG_BET_FOCUS_TEACHER_BET_CE_COEF,
     PG_BET_FOCUS_TRAINING_EPISODES,
     PG_BET_FOCUS_WARMSTART_EPISODES,
@@ -65,7 +71,7 @@ def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Stake-retention preset: freeze rule play, higher bet entropy, "
-            "teacher bet CE, longer warm-start / train budget."
+            "teacher bet CE, longer warm-start / train budget, leaner probes."
         ),
     )
     parser.add_argument(
@@ -96,6 +102,45 @@ def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--print-interval",
+        type=int,
+        default=None,
+        help=(
+            "Greedy probe every N train episodes "
+            f"(default {PG_PRINT_INTERVAL}; "
+            f"{PG_BET_FOCUS_PRINT_INTERVAL} with --bet-focus)."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-eval-episodes",
+        type=int,
+        default=None,
+        help=(
+            "Greedy episodes per mid-run probe "
+            f"(default {PG_CHECKPOINT_EVAL_EPISODES}; "
+            f"{PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES} with --bet-focus)."
+        ),
+    )
+    parser.add_argument(
+        "--final-eval-episodes",
+        type=int,
+        default=None,
+        help=(
+            "Greedy episodes after training (0 skips). "
+            f"Default {PG_FINAL_EVAL_EPISODES}; "
+            f"{PG_BET_FOCUS_FINAL_EVAL_EPISODES} with --bet-focus."
+        ),
+    )
+    parser.add_argument(
+        "--artifact-subdir",
+        type=str,
+        default=None,
+        help=(
+            "Optional subdirectory under agents/results/<agent>/ "
+            f"(default none; '{PG_BET_FOCUS_ARTIFACT_SUBDIR}' with --bet-focus)."
+        ),
+    )
+    parser.add_argument(
         "--reshuffle-threshold",
         type=int,
         default=None,
@@ -108,6 +153,15 @@ def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
         "--device",
         default=None,
         help="Torch device (cpu, mps, cuda). Default: CUDA if available else CPU.",
+    )
+    parser.add_argument(
+        "--torch-threads",
+        type=int,
+        default=1,
+        help=(
+            "torch.set_num_threads(N). Default 1 so parallel agent trains "
+            "do not oversubscribe cores."
+        ),
     )
     return parser
 
@@ -161,9 +215,41 @@ def resolve_pg_train_settings(args: argparse.Namespace) -> dict[str, Any]:
     else:
         warmstart_episodes = PG_WARMSTART_EPISODES
 
+    if args.print_interval is not None:
+        print_interval = int(args.print_interval)
+    elif bet_focus:
+        print_interval = PG_BET_FOCUS_PRINT_INTERVAL
+    else:
+        print_interval = PG_PRINT_INTERVAL
+
+    if args.checkpoint_eval_episodes is not None:
+        checkpoint_eval_episodes = int(args.checkpoint_eval_episodes)
+    elif bet_focus:
+        checkpoint_eval_episodes = PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES
+    else:
+        checkpoint_eval_episodes = PG_CHECKPOINT_EVAL_EPISODES
+
+    if args.final_eval_episodes is not None:
+        final_eval_episodes = int(args.final_eval_episodes)
+    elif bet_focus:
+        final_eval_episodes = PG_BET_FOCUS_FINAL_EVAL_EPISODES
+    else:
+        final_eval_episodes = PG_FINAL_EVAL_EPISODES
+
+    if args.artifact_subdir is not None:
+        artifact_subdir = str(args.artifact_subdir).strip() or None
+    elif bet_focus:
+        artifact_subdir = PG_BET_FOCUS_ARTIFACT_SUBDIR
+    else:
+        artifact_subdir = None
+
     return {
         "episodes": episodes,
         "warmstart_episodes": warmstart_episodes,
+        "print_interval": print_interval,
+        "checkpoint_eval_episodes": checkpoint_eval_episodes,
+        "final_eval_episodes": final_eval_episodes,
+        "artifact_subdir": artifact_subdir,
         "bet_focus": bet_focus,
         "agent_kwargs": {
             "freeze_play": freeze_play,
@@ -199,27 +285,31 @@ def run_pg_training_loop(
 
     running = 0.0
     window = 0
+    probe_every = max(1, int(print_interval))
     for episode in range(1, num_episodes + 1):
         reward = agent.train_one_episode(game)
         running += reward
         window += 1
 
-        if episode % print_interval == 0 or episode == num_episodes:
+        if episode % probe_every == 0 or episode == num_episodes:
             mean_train = running / max(1, window)
             running = 0.0
             window = 0
-            eval_mean, _ = evaluate_greedy(
-                agent,
-                checkpoint_eval_episodes,
-                reshuffle_threshold=game.reshuffle_threshold,
-            )
+            if checkpoint_eval_episodes > 0:
+                eval_mean, _ = evaluate_greedy(
+                    agent,
+                    checkpoint_eval_episodes,
+                    reshuffle_threshold=game.reshuffle_threshold,
+                )
+            else:
+                eval_mean = float("nan")
             print(
                 f"Episode {episode}/{num_episodes}  "
                 f"train_window={mean_train:.4f}  "
                 f"greedy_eval={eval_mean:.4f}  "
                 f"steps={agent.training_steps}"
             )
-            if curve_logger is not None:
+            if curve_logger is not None and checkpoint_eval_episodes > 0:
                 curve_logger.append(
                     episode=episode,
                     training_steps=agent.training_steps,
@@ -252,10 +342,15 @@ def run_pg_train_main(
     except ValueError as exc:
         parser.error(str(exc))
 
+    if args.torch_threads is not None and args.torch_threads > 0:
+        torch.set_num_threads(int(args.torch_threads))
+
     settings = resolve_pg_train_settings(args)
     multi = len(seeds) > 1
     aggregate: list[dict[str, Any]] = []
     agent_base = agent_results_path(agent_name, model_filename).parent
+    if settings["artifact_subdir"]:
+        agent_base = agent_base / settings["artifact_subdir"]
 
     for seed in seeds:
         set_seed(seed)
@@ -277,12 +372,17 @@ def run_pg_train_main(
             f"bet_entropy={factory_kwargs['bet_entropy_coef']}  "
             f"teacher_ce={factory_kwargs['teacher_bet_ce_coef']}  "
             f"warmstart_episodes="
-            f"{0 if args.no_warmstart else settings['warmstart_episodes']}"
+            f"{0 if args.no_warmstart else settings['warmstart_episodes']}  "
+            f"print_interval={settings['print_interval']}  "
+            f"checkpoint_eval={settings['checkpoint_eval_episodes']}  "
+            f"final_eval={settings['final_eval_episodes']}"
         )
         run_pg_training_loop(
             agent,
             game,
             settings["episodes"],
+            print_interval=settings["print_interval"],
+            checkpoint_eval_episodes=settings["checkpoint_eval_episodes"],
             warmstart=not args.no_warmstart,
             warmstart_episodes=settings["warmstart_episodes"],
             learning_curve_path=curve_path,
@@ -301,20 +401,26 @@ def run_pg_train_main(
         )
         print(f"Saved checkpoint: {model_path}")
 
-        mean_reward, distribution = evaluate_greedy(
-            agent,
-            PG_FINAL_EVAL_EPISODES,
-            seed=seed,
-            reshuffle_threshold=args.reshuffle_threshold,
-        )
-        print(f"Final greedy eval ({PG_FINAL_EVAL_EPISODES} eps): {mean_reward:.6f}")
-        print_distribution(distribution)
+        mean_reward = None
+        distribution: dict[str, Any] = {}
+        if settings["final_eval_episodes"] > 0:
+            mean_reward, distribution = evaluate_greedy(
+                agent,
+                settings["final_eval_episodes"],
+                seed=seed,
+                reshuffle_threshold=args.reshuffle_threshold,
+            )
+            print(
+                f"Final greedy eval ({settings['final_eval_episodes']} eps): "
+                f"{mean_reward:.6f}"
+            )
+            print_distribution(distribution)
 
         summary = {
             "agent": agent_name,
             "seed": seed,
             "episodes": settings["episodes"],
-            "final_eval_episodes": PG_FINAL_EVAL_EPISODES,
+            "final_eval_episodes": settings["final_eval_episodes"],
             "mean_reward": mean_reward,
             "distribution": dict(distribution),
             "checkpoint": str(model_path),
@@ -327,6 +433,8 @@ def run_pg_train_main(
             "bet_entropy_coef": float(agent.bet_entropy_coef),
             "play_entropy_coef": float(agent.play_entropy_coef),
             "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
+            "print_interval": settings["print_interval"],
+            "checkpoint_eval_episodes": settings["checkpoint_eval_episodes"],
             "reshuffle_threshold": game.reshuffle_threshold,
         }
         summary_path = out_dir / "train_summary.json"

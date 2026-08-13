@@ -119,7 +119,9 @@ def test_policy_checkpoint_roundtrip(tmp_path: Path):
 def test_warmstart_from_spread_rule_runs():
     agent = A2CAgent()
     before = agent.training_steps
-    warmstart_from_spread_rule(agent, BlackjackGame(), num_episodes=3)
+    warmstart_from_spread_rule(
+        agent, BlackjackGame(), num_episodes=3, batch_size=1
+    )
     assert agent.training_steps == before + 3
 
 
@@ -148,7 +150,11 @@ def test_freeze_play_uses_rule_chart_and_skips_play_updates():
 def test_bet_focus_cli_defaults():
     from agents.train_pg_cli import build_pg_arg_parser, resolve_pg_train_settings
     from config import (
+        PG_BET_FOCUS_ARTIFACT_SUBDIR,
         PG_BET_FOCUS_BET_ENTROPY_COEF,
+        PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES,
+        PG_BET_FOCUS_FINAL_EVAL_EPISODES,
+        PG_BET_FOCUS_PRINT_INTERVAL,
         PG_BET_FOCUS_TEACHER_BET_CE_COEF,
         PG_BET_FOCUS_TRAINING_EPISODES,
         PG_BET_FOCUS_WARMSTART_EPISODES,
@@ -159,6 +165,13 @@ def test_bet_focus_cli_defaults():
     settings = resolve_pg_train_settings(args)
     assert settings["episodes"] == PG_BET_FOCUS_TRAINING_EPISODES
     assert settings["warmstart_episodes"] == PG_BET_FOCUS_WARMSTART_EPISODES
+    assert settings["print_interval"] == PG_BET_FOCUS_PRINT_INTERVAL
+    assert (
+        settings["checkpoint_eval_episodes"]
+        == PG_BET_FOCUS_CHECKPOINT_EVAL_EPISODES
+    )
+    assert settings["final_eval_episodes"] == PG_BET_FOCUS_FINAL_EVAL_EPISODES
+    assert settings["artifact_subdir"] == PG_BET_FOCUS_ARTIFACT_SUBDIR
     assert settings["agent_kwargs"]["freeze_play"] is True
     assert (
         settings["agent_kwargs"]["bet_entropy_coef"] == PG_BET_FOCUS_BET_ENTROPY_COEF
@@ -167,6 +180,16 @@ def test_bet_focus_cli_defaults():
         settings["agent_kwargs"]["teacher_bet_ce_coef"]
         == PG_BET_FOCUS_TEACHER_BET_CE_COEF
     )
+
+
+def test_warmstart_batches_optimizer_steps():
+    agent = A2CAgent(freeze_play=True)
+    before = agent.training_steps
+    warmstart_from_spread_rule(
+        agent, BlackjackGame(), num_episodes=10, batch_size=4
+    )
+    # 10 episodes / batch 4 => 3 optimizer steps (4+4+2).
+    assert agent.training_steps == before + 3
 
 
 def test_freeze_play_checkpoint_restores_rule_play(tmp_path: Path):

@@ -43,6 +43,7 @@ python3 -m agents.train_double_dqn --seed 42
 python3 -m agents.train_reinforce --seed 42
 python3 -m agents.train_a2c --seed 42
 python3 -m agents.train_a2c --bet-focus --seed 42
+python3 scripts/run_pg_bet_focus_train.py
 python3 -m agents.train_ppo --seed 42
 python3 scripts/run_ablation_double_dqn.py --smoke
 python3 scripts/run_variable_betting_eval.py --smoke
