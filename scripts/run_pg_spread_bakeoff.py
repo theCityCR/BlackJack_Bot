@@ -89,10 +89,27 @@ def main() -> None:
         help="Recorded train episode budget for artifact metadata",
     )
     parser.add_argument(
+        "--checkpoint-subdir",
+        type=str,
+        default=None,
+        help=(
+            "Optional subdirectory under agents/results/<agent>/ "
+            "(e.g. bet_focus for post-§5.7 stake-retention trains)."
+        ),
+    )
+    parser.add_argument(
+        "--bet-focus",
+        action="store_true",
+        help="Shorthand for --checkpoint-subdir bet_focus and train-episodes 500000.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
-        default=DEFAULT_OUTPUT,
-        help=f"Combined JSON path (default {DEFAULT_OUTPUT})",
+        default=None,
+        help=(
+            f"Combined JSON path (default {DEFAULT_OUTPUT}; "
+            "docs/results/pg_bet_focus_bakeoff_results.json with --bet-focus)."
+        ),
     )
     parser.add_argument(
         "--smoke",
@@ -100,6 +117,17 @@ def main() -> None:
         help="Short CI bake-off (500 episodes, seed 42 only)",
     )
     args = parser.parse_args()
+
+    if args.bet_focus and args.checkpoint_subdir is None:
+        args.checkpoint_subdir = "bet_focus"
+    if args.bet_focus and args.train_episodes == 200_000:
+        args.train_episodes = 500_000
+    if args.output is None:
+        args.output = (
+            Path("docs/results/pg_bet_focus_bakeoff_results.json")
+            if args.bet_focus
+            else DEFAULT_OUTPUT
+        )
 
     try:
         seeds = (
@@ -121,6 +149,8 @@ def main() -> None:
     agent_blocks: list[dict[str, Any]] = []
     for name in agent_names:
         checkpoint = Path(DEFAULT_CHECKPOINTS[name])
+        if args.checkpoint_subdir:
+            checkpoint = checkpoint.parent / args.checkpoint_subdir / checkpoint.name
         if not checkpoint.is_file():
             parser.error(f"missing checkpoint for {name}: {checkpoint}")
         print(f"\n===== Bake-off {name}  checkpoint={checkpoint} =====")
@@ -138,6 +168,8 @@ def main() -> None:
         "smoke": bool(args.smoke),
         "train_seed": args.train_seed,
         "train_episodes": args.train_episodes,
+        "bet_focus": bool(args.bet_focus or args.checkpoint_subdir == "bet_focus"),
+        "checkpoint_subdir": args.checkpoint_subdir,
         "warmstart": True,
         "eval_episodes": episodes,
         "eval_seeds": seeds,
@@ -145,9 +177,15 @@ def main() -> None:
         "paired_eval": True,
         "agents": agent_blocks,
         "artifact_note": (
-            "Published §5.7 PG vs rule+Hi-Lo bake-off. "
-            "Checkpoints under agents/results/<agent>/ remain gitignored; "
-            "does not modify flat-bet or §5.5 multi-seed tables."
+            "Bet-focus PG vs rule+Hi-Lo bake-off (500k freeze-play / teacher CE). "
+            "Does not replace published §5.7 "
+            "docs/results/pg_spread_bakeoff_results.json."
+            if (args.bet_focus or args.checkpoint_subdir == "bet_focus")
+            else (
+                "Published §5.7 PG vs rule+Hi-Lo bake-off. "
+                "Checkpoints under agents/results/<agent>/ remain gitignored; "
+                "does not modify flat-bet or §5.5 multi-seed tables."
+            )
         ),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
