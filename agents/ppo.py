@@ -14,15 +14,19 @@ from agents.policy_base import (
     PlayDecision,
 )
 from config import (
+    PG_BET_ENTROPY_COEF,
     PG_CRITIC_COEF,
     PG_DISCOUNT_FACTOR,
     PG_ENTROPY_COEF,
+    PG_FREEZE_PLAY,
     PG_LEARNING_RATE,
     PG_MAX_GRAD_NORM,
+    PG_PLAY_ENTROPY_COEF,
     PG_PPO_CLIP,
     PG_PPO_EPOCHS,
     PG_PPO_MINIBATCH_SIZE,
     PG_PPO_ROLLOUT_EPISODES,
+    PG_TEACHER_BET_CE_COEF,
 )
 from game import BlackjackGame
 
@@ -36,6 +40,10 @@ class PPOAgent(BetPlayPolicyAgent):
         learning_rate: float = PG_LEARNING_RATE,
         discount_factor: float = PG_DISCOUNT_FACTOR,
         entropy_coef: float = PG_ENTROPY_COEF,
+        bet_entropy_coef: float | None = PG_BET_ENTROPY_COEF,
+        play_entropy_coef: float | None = PG_PLAY_ENTROPY_COEF,
+        teacher_bet_ce_coef: float = PG_TEACHER_BET_CE_COEF,
+        freeze_play: bool = PG_FREEZE_PLAY,
         critic_coef: float = PG_CRITIC_COEF,
         max_grad_norm: float = PG_MAX_GRAD_NORM,
         clip_epsilon: float = PG_PPO_CLIP,
@@ -48,6 +56,10 @@ class PPOAgent(BetPlayPolicyAgent):
             learning_rate=learning_rate,
             discount_factor=discount_factor,
             entropy_coef=entropy_coef,
+            bet_entropy_coef=bet_entropy_coef,
+            play_entropy_coef=play_entropy_coef,
+            teacher_bet_ce_coef=teacher_bet_ce_coef,
+            freeze_play=freeze_play,
             critic_coef=critic_coef,
             max_grad_norm=max_grad_norm,
             device=device,
@@ -91,7 +103,7 @@ class PPOAgent(BetPlayPolicyAgent):
             return {"loss": 0.0}
 
         bet_batch = self._stack_bet_batch(self._bet_buffer)
-        play_batch = self._stack_play_batch(self._play_buffer)
+        play_batch = None if self.freeze_play else self._stack_play_batch(self._play_buffer)
         last_loss = 0.0
 
         for _ in range(self.ppo_epochs):
@@ -140,10 +152,12 @@ class PPOAgent(BetPlayPolicyAgent):
         )
         policy_loss = -torch.min(unclipped, clipped).mean()
         value_loss = F.mse_loss(values, batch["returns"])
+        teacher_ce = self.teacher_bet_ce_loss(batch)
         loss = (
             policy_loss
             + self.critic_coef * value_loss
-            - self.entropy_coef * entropy.mean()
+            - self.bet_entropy_coef * entropy.mean()
+            + self.teacher_bet_ce_coef * teacher_ce
         )
         self.optimizer.zero_grad()
         loss.backward()
@@ -166,7 +180,7 @@ class PPOAgent(BetPlayPolicyAgent):
         loss = (
             policy_loss
             + self.critic_coef * value_loss
-            - self.entropy_coef * entropy.mean()
+            - self.play_entropy_coef * entropy.mean()
         )
         self.optimizer.zero_grad()
         loss.backward()

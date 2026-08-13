@@ -21,7 +21,18 @@ from agents.common import (
 )
 from agents.counting import true_count_from_shoe
 from agents.networks import BetPlayActorCritic
-from config import BET_MAX, BET_MIN, NUM_DECKS
+from agents.rule import RuleAgent
+from agents.spread_rule import SpreadRuleAgent
+from config import (
+    BET_MAX,
+    BET_MIN,
+    NUM_DECKS,
+    PG_BET_ENTROPY_COEF,
+    PG_ENTROPY_COEF,
+    PG_FREEZE_PLAY,
+    PG_PLAY_ENTROPY_COEF,
+    PG_TEACHER_BET_CE_COEF,
+)
 from game import Action, BlackjackGame, GameState, ShoeObservation
 
 BET_ACTION_COUNT = BET_MAX - BET_MIN + 1
@@ -47,6 +58,7 @@ class BetDecision:
     log_prob: float
     value: float
     entropy: float
+    teacher_bet_index: int
     return_: float = 0.0
 
 
@@ -77,7 +89,11 @@ class BetPlayPolicyAgent(ABC):
         *,
         learning_rate: float = 0.0003,
         discount_factor: float = 1.0,
-        entropy_coef: float = 0.01,
+        entropy_coef: float = PG_ENTROPY_COEF,
+        bet_entropy_coef: float | None = None,
+        play_entropy_coef: float | None = None,
+        teacher_bet_ce_coef: float = PG_TEACHER_BET_CE_COEF,
+        freeze_play: bool = PG_FREEZE_PLAY,
         critic_coef: float = 0.5,
         max_grad_norm: float = 0.5,
         device: str | None = None,
@@ -86,6 +102,17 @@ class BetPlayPolicyAgent(ABC):
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.entropy_coef = entropy_coef
+        # Prefer head-specific coefs; fall back to shared entropy_coef when unset.
+        self.bet_entropy_coef = float(
+            PG_BET_ENTROPY_COEF if bet_entropy_coef is None else bet_entropy_coef
+        )
+        self.play_entropy_coef = float(
+            PG_PLAY_ENTROPY_COEF if play_entropy_coef is None else play_entropy_coef
+        )
+        self.teacher_bet_ce_coef = float(teacher_bet_ce_coef)
+        self.freeze_play = bool(freeze_play)
+        # When play is frozen, the rule chart owns hit/stand so EV measures stake quality.
+        self.use_rule_play = self.freeze_play
         self.critic_coef = critic_coef
         self.max_grad_norm = max_grad_norm
         self.use_critic = use_critic
@@ -100,9 +127,14 @@ class BetPlayPolicyAgent(ABC):
             bet_actions=self.bet_actions,
             play_actions=self.play_actions,
         ).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=self.learning_rate
-        )
+        self._rule_play = RuleAgent() if self.use_rule_play else None
+        self._spread_teacher = SpreadRuleAgent()
+        if self.freeze_play:
+            self._apply_freeze_play()
+        else:
+            self.optimizer = torch.optim.Adam(
+                self.model.parameters(), lr=self.learning_rate
+            )
         self.training_steps = 0
         self.last_bet: float = 1.0
         self.last_true_count: float = 0.0
@@ -110,6 +142,15 @@ class BetPlayPolicyAgent(ABC):
         # Greedy eval path (evaluate_greedy looks for epsilon on DQN agents).
         self.epsilon = 0.0
 
+    def _play_parameter_modules(self) -> tuple[torch.nn.Module, ...]:
+        return (self.model.play_body, self.model.play_policy, self.model.play_value)
+
+    def _apply_freeze_play(self) -> None:
+        for module in self._play_parameter_modules():
+            for param in module.parameters():
+                param.requires_grad = False
+        trainable = [p for p in self.model.parameters() if p.requires_grad]
+        self.optimizer = torch.optim.Adam(trainable, lr=self.learning_rate)
     def encode_shoe(self, shoe: ShoeObservation) -> torch.Tensor:
         return encode_shoe(shoe)
 
@@ -118,6 +159,9 @@ class BetPlayPolicyAgent(ABC):
 
     def legal_action_indices(self, available_actions) -> list[int]:
         return [ACTION_TO_INDEX[action] for action in available_actions]
+
+    def teacher_bet_index(self, shoe: ShoeObservation) -> int:
+        return stake_to_bet_index(self._spread_teacher.choose_bet(shoe))
 
     @staticmethod
     def mask_illegal_logits(
@@ -167,6 +211,9 @@ class BetPlayPolicyAgent(ABC):
         *,
         greedy: bool = False,
     ) -> Action:
+        if self.use_rule_play:
+            assert self._rule_play is not None
+            return self._rule_play.choose_action(state, available_actions)
         legal_indices = self.legal_action_indices(available_actions)
         features = self.encode_state(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
@@ -191,6 +238,7 @@ class BetPlayPolicyAgent(ABC):
             log_prob=float(dist.log_prob(sample).item()),
             value=float(value.item()),
             entropy=float(dist.entropy().item()),
+            teacher_bet_index=self.teacher_bet_index(shoe),
         )
 
     def _sample_play_decision(
@@ -236,12 +284,16 @@ class BetPlayPolicyAgent(ABC):
 
         done = False
         while not done:
-            hand_index = game.active_hand_index
             available = game.available_actions()
-            action, play_decision = self._sample_play_decision(
-                state, available, hand_index
-            )
-            trajectory.play.append(play_decision)
+            if self.use_rule_play:
+                assert self._rule_play is not None
+                action = self._rule_play.choose_action(state, available)
+            else:
+                hand_index = game.active_hand_index
+                action, play_decision = self._sample_play_decision(
+                    state, available, hand_index
+                )
+                trajectory.play.append(play_decision)
             state, reward, done = game.step(action)
             if done:
                 trajectory.round_reward = float(reward)
@@ -294,6 +346,11 @@ class BetPlayPolicyAgent(ABC):
             "shoe": shoes,
             "action": torch.tensor(
                 [d.bet_index for d in decisions], dtype=torch.long, device=self.device
+            ),
+            "teacher_action": torch.tensor(
+                [d.teacher_bet_index for d in decisions],
+                dtype=torch.long,
+                device=self.device,
             ),
             "old_log_prob": torch.tensor(
                 [d.log_prob for d in decisions], dtype=torch.float32, device=self.device
@@ -355,5 +412,12 @@ class BetPlayPolicyAgent(ABC):
         dist = Categorical(logits=masked)
         return dist.log_prob(batch["action"]), values, dist.entropy()
 
+    def teacher_bet_ce_loss(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+        if self.teacher_bet_ce_coef <= 0.0:
+            return torch.zeros((), device=self.device)
+        logits, _ = self.model.bet_logits_value(batch["shoe"])
+        return F.cross_entropy(logits, batch["teacher_action"])
+
     def _clip_grads(self) -> None:
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+        params = [p for p in self.model.parameters() if p.requires_grad]
+        torch.nn.utils.clip_grad_norm_(params, self.max_grad_norm)

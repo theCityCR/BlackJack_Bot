@@ -534,6 +534,15 @@ def load_policy_checkpoint(
     kwargs: dict[str, Any] = dict(agent_kwargs)
     if device is not None:
         kwargs["device"] = device
+    # Restore stake-only / rule-play mode so eval matches training.
+    for key in (
+        "freeze_play",
+        "bet_entropy_coef",
+        "play_entropy_coef",
+        "teacher_bet_ce_coef",
+    ):
+        if key not in kwargs and key in checkpoint:
+            kwargs[key] = checkpoint[key]
 
     try:
         agent = agent_class(**kwargs)
@@ -554,6 +563,12 @@ def load_policy_checkpoint(
         agent._baseline_initialized = bool(
             checkpoint.get("baseline_initialized", True)
         )
+    if "use_rule_play" in checkpoint:
+        agent.use_rule_play = bool(checkpoint["use_rule_play"])
+        if agent.use_rule_play and getattr(agent, "_rule_play", None) is None:
+            from agents.rule import RuleAgent
+
+            agent._rule_play = RuleAgent()
     agent.model.eval()
     return agent, checkpoint
 
