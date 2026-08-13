@@ -13,6 +13,7 @@ from agents.cli_seeds import add_seed_arguments, seed_artifact_dir, seeds_from_a
 from agents.common import (
     agent_results_path,
     evaluate_greedy,
+    load_policy_checkpoint,
     print_distribution,
     save_policy_checkpoint,
     set_seed,
@@ -163,6 +164,14 @@ def build_pg_arg_parser(description: str) -> argparse.ArgumentParser:
             "do not oversubscribe cores."
         ),
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Continue from an existing checkpoint in the artifact dir "
+            "(skips warm-start; trains remaining episodes to --episodes)."
+        ),
+    )
     return parser
 
 
@@ -270,23 +279,56 @@ def run_pg_training_loop(
     warmstart: bool | None = None,
     warmstart_episodes: int | None = None,
     learning_curve_path: Path | str | None = None,
+    start_episode: int = 0,
+    checkpoint_path: Path | str | None = None,
+    checkpoint_extra: dict[str, Any] | None = None,
 ) -> Any:
-    """Train a bet+play PG agent with periodic greedy probes."""
+    """Train a bet+play PG agent with periodic greedy probes.
+
+    When ``checkpoint_path`` is set, the model is saved at each probe (and at
+    the end) with ``episodes_completed`` so ``--resume`` can continue later.
+    ``start_episode`` is the number of RL episodes already finished (0 = fresh).
+    """
+    if start_episode < 0:
+        raise ValueError(f"start_episode must be >= 0, got {start_episode}")
+    if start_episode > num_episodes:
+        raise ValueError(
+            f"start_episode ({start_episode}) exceeds num_episodes ({num_episodes})"
+        )
+
     do_warmstart = PG_WARMSTART_ENABLED if warmstart is None else warmstart
     ws_episodes = (
         PG_WARMSTART_EPISODES if warmstart_episodes is None else warmstart_episodes
     )
-    if do_warmstart and ws_episodes > 0:
+    if start_episode == 0 and do_warmstart and ws_episodes > 0:
         warmstart_from_spread_rule(agent, game, ws_episodes)
 
     curve_logger = None
     if learning_curve_path is not None and PG_LEARNING_CURVE_ENABLED:
         curve_logger = LearningCurveLogger(learning_curve_path)
 
+    def _save_progress(episodes_completed: int) -> None:
+        if checkpoint_path is None:
+            return
+        extra = {
+            "episodes_completed": int(episodes_completed),
+            "target_episodes": int(num_episodes),
+        }
+        if checkpoint_extra:
+            extra.update(checkpoint_extra)
+        save_policy_checkpoint(agent, checkpoint_path, extra=extra)
+
+    if start_episode >= num_episodes:
+        print(
+            f"Resume: already at {start_episode}/{num_episodes} episodes; nothing to do"
+        )
+        return agent
+
+    agent.model.train()
     running = 0.0
     window = 0
     probe_every = max(1, int(print_interval))
-    for episode in range(1, num_episodes + 1):
+    for episode in range(start_episode + 1, num_episodes + 1):
         reward = agent.train_one_episode(game)
         running += reward
         window += 1
@@ -317,6 +359,8 @@ def run_pg_training_loop(
                     epsilon=0.0,
                     shoe_features_on=True,
                 )
+            _save_progress(episode)
+            print(f"Checkpoint saved ({episode}/{num_episodes}): {checkpoint_path}")
 
     # Flush partial PPO rollout if any.
     if hasattr(agent, "update_from_rollout") and getattr(
@@ -324,6 +368,7 @@ def run_pg_training_loop(
     ):
         agent.update_from_rollout()
         agent.clear_rollout()
+        _save_progress(num_episodes)
 
     return agent
 
@@ -364,18 +409,46 @@ def run_pg_train_main(
             factory_kwargs["device"] = args.device
 
         game = BlackjackGame(reshuffle_threshold=args.reshuffle_threshold)
-        agent = agent_factory(**factory_kwargs)
-        print(f"\n=== Train seed={seed} artifacts={out_dir} ===")
+        start_episode = 0
+        resume_requested = bool(args.resume)
+        if resume_requested and model_path.is_file():
+            agent, payload = load_policy_checkpoint(
+                agent_factory, model_path, **factory_kwargs
+            )
+            start_episode = int(payload.get("episodes_completed", 0))
+            print(
+                f"\n=== Resume seed={seed} from {model_path} "
+                f"at episode {start_episode}/{settings['episodes']} ==="
+            )
+        elif resume_requested:
+            print(
+                f"\n=== Resume requested but no checkpoint at {model_path}; "
+                "starting fresh ==="
+            )
+            agent = agent_factory(**factory_kwargs)
+        else:
+            agent = agent_factory(**factory_kwargs)
+            print(f"\n=== Train seed={seed} artifacts={out_dir} ===")
+
+        checkpoint_extra = {
+            "freeze_play": bool(agent.freeze_play),
+            "use_rule_play": bool(agent.use_rule_play),
+            "bet_entropy_coef": float(agent.bet_entropy_coef),
+            "play_entropy_coef": float(agent.play_entropy_coef),
+            "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
+            "bet_focus": settings["bet_focus"],
+        }
         print(
             f"bet_focus={settings['bet_focus']}  "
             f"freeze_play={factory_kwargs['freeze_play']}  "
             f"bet_entropy={factory_kwargs['bet_entropy_coef']}  "
             f"teacher_ce={factory_kwargs['teacher_bet_ce_coef']}  "
             f"warmstart_episodes="
-            f"{0 if args.no_warmstart else settings['warmstart_episodes']}  "
+            f"{0 if (args.no_warmstart or start_episode > 0) else settings['warmstart_episodes']}  "
             f"print_interval={settings['print_interval']}  "
             f"checkpoint_eval={settings['checkpoint_eval_episodes']}  "
-            f"final_eval={settings['final_eval_episodes']}"
+            f"final_eval={settings['final_eval_episodes']}  "
+            f"start_episode={start_episode}"
         )
         run_pg_training_loop(
             agent,
@@ -383,21 +456,12 @@ def run_pg_train_main(
             settings["episodes"],
             print_interval=settings["print_interval"],
             checkpoint_eval_episodes=settings["checkpoint_eval_episodes"],
-            warmstart=not args.no_warmstart,
+            warmstart=not args.no_warmstart and start_episode == 0,
             warmstart_episodes=settings["warmstart_episodes"],
             learning_curve_path=curve_path,
-        )
-        save_policy_checkpoint(
-            agent,
-            model_path,
-            extra={
-                "freeze_play": bool(agent.freeze_play),
-                "use_rule_play": bool(agent.use_rule_play),
-                "bet_entropy_coef": float(agent.bet_entropy_coef),
-                "play_entropy_coef": float(agent.play_entropy_coef),
-                "teacher_bet_ce_coef": float(agent.teacher_bet_ce_coef),
-                "bet_focus": settings["bet_focus"],
-            },
+            start_episode=start_episode,
+            checkpoint_path=model_path,
+            checkpoint_extra=checkpoint_extra,
         )
         print(f"Saved checkpoint: {model_path}")
 
@@ -420,13 +484,17 @@ def run_pg_train_main(
             "agent": agent_name,
             "seed": seed,
             "episodes": settings["episodes"],
+            "episodes_completed": settings["episodes"],
+            "resumed_from_episode": start_episode,
             "final_eval_episodes": settings["final_eval_episodes"],
             "mean_reward": mean_reward,
             "distribution": dict(distribution),
             "checkpoint": str(model_path),
-            "warmstart": not args.no_warmstart,
+            "warmstart": not args.no_warmstart and start_episode == 0,
             "warmstart_episodes": (
-                0 if args.no_warmstart else settings["warmstart_episodes"]
+                0
+                if args.no_warmstart or start_episode > 0
+                else settings["warmstart_episodes"]
             ),
             "bet_focus": settings["bet_focus"],
             "freeze_play": bool(agent.freeze_play),

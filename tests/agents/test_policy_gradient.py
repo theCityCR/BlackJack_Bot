@@ -192,6 +192,45 @@ def test_warmstart_batches_optimizer_steps():
     assert agent.training_steps == before + 3
 
 
+def test_pg_training_loop_checkpoints_and_resumes(tmp_path: Path):
+    from agents.train_pg_cli import run_pg_training_loop
+
+    ckpt = tmp_path / "a2c.pt"
+    curve = tmp_path / "learning_curve.csv"
+    agent = A2CAgent(freeze_play=True, teacher_bet_ce_coef=0.05)
+    run_pg_training_loop(
+        agent,
+        BlackjackGame(),
+        num_episodes=6,
+        print_interval=3,
+        checkpoint_eval_episodes=2,
+        warmstart=False,
+        learning_curve_path=curve,
+        checkpoint_path=ckpt,
+        checkpoint_extra={"freeze_play": True},
+    )
+    assert ckpt.is_file()
+    loaded, payload = load_policy_checkpoint(A2CAgent, ckpt)
+    assert payload["episodes_completed"] == 6
+    assert payload["target_episodes"] == 6
+
+    # Resume a longer budget from the saved episode count.
+    run_pg_training_loop(
+        loaded,
+        BlackjackGame(),
+        num_episodes=9,
+        print_interval=3,
+        checkpoint_eval_episodes=2,
+        warmstart=False,
+        learning_curve_path=curve,
+        start_episode=int(payload["episodes_completed"]),
+        checkpoint_path=ckpt,
+        checkpoint_extra={"freeze_play": True},
+    )
+    _, payload2 = load_policy_checkpoint(A2CAgent, ckpt)
+    assert payload2["episodes_completed"] == 9
+
+
 def test_freeze_play_checkpoint_restores_rule_play(tmp_path: Path):
     agent = A2CAgent(freeze_play=True, teacher_bet_ce_coef=0.05)
     agent.train_one_episode(BlackjackGame())
